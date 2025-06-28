@@ -26,8 +26,7 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
   @override
   Widget build(BuildContext context) {
     return BottomAppBar(
-      color: Colors.red,
-      //Change to transparent
+      color: Colors.transparent,
       elevation: 0,
       height: 80,
       padding: EdgeInsets.zero,
@@ -72,7 +71,7 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
               ),
             ),
           ),
-          Positioned(top: 0, child: CustomSemicircle(score: 100)),
+          Positioned(top: 0, child: CustomSemicircle(score: 90)),
         ],
       ),
     );

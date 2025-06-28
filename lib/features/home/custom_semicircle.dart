@@ -1,44 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
+import 'dart:math';
 
 class CustomSemicircle extends StatelessWidget {
   final double score;
 
   const CustomSemicircle({super.key, required this.score});
 
+  Color _getScoreColor(double score) {
+    if (score >= 85) {
+      return AppColors.goodForm;
+    } else if (score >= 60) {
+      return AppColors.moderateForm;
+    } else {
+      return AppColors.poorForm;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ClipPath(
-      clipper: _SemicircleClipper(),
-      child: Container(
-        width: 160,
-        height: 80,
-        decoration: ShapeDecoration(
-          color: Colors.green, //AppColors.primaryShadow,
-          shape: OvalBorder(
-            side: BorderSide(width: 7, color: AppColors.primaryBackground),
+    final scoreColor = _getScoreColor(score);
+
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        // Outer semicircle (border)
+        Container(
+          width: 160,
+          height: 80,
+          decoration: BoxDecoration(
+            color: AppColors.primaryBackground,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(100),
+              topRight: Radius.circular(100),
+            ),
+            boxShadow: [AppShadows.semiCircleShadow],
           ),
-          shadows: [AppShadows.appBarShadow],
         ),
-      ),
+        // Inner semicircle (fill)
+        Container(
+          padding: EdgeInsets.only(top: 10),
+          width: 146,
+          height: 73,
+          decoration: BoxDecoration(
+            color: scoreColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(100),
+              topRight: Radius.circular(100),
+            ),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Center(child: Text(score.toString(), style: AppTextStyles.percentageText)),
+              const Positioned(
+                  right: 13,
+                  top: 20,
+                  bottom: 0,
+                  child: Text("%", style: AppTextStyles.percentageSymbol,))
+            ],
+          ),
+        ),
+      ],
     );
   }
-}
-
-class _SemicircleClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.moveTo(0, size.height);
-    path.arcToPoint(
-      Offset(size.width, size.height),
-      radius: Radius.elliptical(size.width / 2, size.height),
-      clockwise: false,
-    );
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

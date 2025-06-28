@@ -20,6 +20,19 @@ class AppTextStyles {
     fontFamily: 'FiraCode'
   );
 
+  static const TextStyle percentageText = TextStyle(
+      fontSize: 45,
+      color: AppColors.primaryText,
+      fontWeight: FontWeight.bold,
+      fontFamily: 'FiraCode'
+  );
+
+  static const TextStyle percentageSymbol = TextStyle(
+      fontSize: 25,
+      color: AppColors.primaryText,
+      fontFamily: 'FiraCode'
+  );
+
   static const TextStyle buttonText = TextStyle(
     fontSize: 16,
     color: AppColors.primaryText,
@@ -30,7 +43,14 @@ class AppTextStyles {
 
 class AppShadows {
   static const BoxShadow appBarShadow = BoxShadow(
-    color: Color(0xFF000000),
+    color: AppColors.primaryShadow,
+    blurRadius: 4,
+    offset: Offset(0, 0),
+    spreadRadius: 3,
+  );
+
+  static const BoxShadow semiCircleShadow = BoxShadow(
+    color: Color(0x40000000),
     blurRadius: 4,
     offset: Offset(0, 0),
     spreadRadius: 3,
