@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const Color primaryBackground = Color(0xFF1B1B1B);
   static const Color primaryText = Color(0xFFE5E5E5);
-  static const Color buttonGreen = Color(0xFF2E7D79);
-  static const Color buttonHover = Color(0xFF8BAF94);
+  static const Color primaryButton = Color(0xFF2E7D79);
+  static const Color secondaryButton = Color(0xFF8BAF94);
+  static const Color primaryShadow = Color(0x3F7286A0);
   static const Color stopButton = Color(0xFFB04A4A);
   static const Color goodForm = Color(0xFF4CAF50);
   static const Color moderateForm = Color(0xFFFBC02D);
@@ -24,5 +25,14 @@ class AppTextStyles {
     color: AppColors.primaryText,
     fontWeight: FontWeight.bold,
     fontFamily: 'WorkSans',
+  );
+}
+
+class AppShadows {
+  static const BoxShadow buttonShadow = BoxShadow(
+    color: AppColors.primaryShadow,
+    blurRadius: 6,
+    offset: Offset(0, 2),
+    spreadRadius: 1,
   );
 }
