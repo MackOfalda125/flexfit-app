@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/features/loading/loading_screen.dart';
 import 'package:app/features/home/home_screen.dart';
-import 'package:app/features/home/test_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,11 +15,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'FlexFit',
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/',
       routes: {
         '/': (context) => const LoadingScreen(),
         '/home': (context) => const HomeScreen(),
-        '/test': (context) => const TestScreen()
       },
     );
   }

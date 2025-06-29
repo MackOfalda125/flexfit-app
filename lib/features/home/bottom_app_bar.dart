@@ -51,15 +51,13 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
                 children: [
                   Padding(
                     padding: EdgeInsets.only(left: 12),
-                    child: IconButton(
-                      icon: const Icon(
+                    child: InkWell(
+                      onTap: widget.onMenuPressed,
+                      child: Icon(
                         Icons.menu_rounded,
                         color: AppColors.primaryText,
                         size: 38.4,
                       ),
-                      onPressed: widget.onMenuPressed,
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
                     ),
                   ),
                   Padding(

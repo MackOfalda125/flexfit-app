@@ -45,15 +45,13 @@ class ExerciseMenuPanel extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: EdgeInsets.only(left: 12, bottom: 12),
-              child: IconButton(
-                icon: const Icon(
+              child: InkWell(
+                onTap: onBackPressed,
+                child: const Icon(
                   Icons.arrow_back_rounded,
                   color: AppColors.primaryText,
                   size: 38.4,
                 ),
-                onPressed: onBackPressed,
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
               ),
             ),
           ),

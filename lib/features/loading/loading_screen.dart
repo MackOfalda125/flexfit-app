@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:app/features/home/home_screen.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -11,6 +12,19 @@ class LoadingScreen extends StatefulWidget {
 
 class _LoadingScreenState extends State<LoadingScreen> {
   //TODO: Camera Permission, Load Models
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
