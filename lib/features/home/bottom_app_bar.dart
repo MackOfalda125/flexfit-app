@@ -4,7 +4,9 @@ import 'package:app/features/home/start_stop_button.dart';
 import 'package:app/features/home/custom_semicircle.dart';
 
 class CustomBottomAppBar extends StatefulWidget {
-  const CustomBottomAppBar({super.key});
+  final VoidCallback onMenuPressed;
+
+  const CustomBottomAppBar({super.key, required this.onMenuPressed});
 
   @override
   State<CustomBottomAppBar> createState() => _CustomBottomAppBarState();
@@ -21,7 +23,7 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
     // Add Start/Stop Logic Here
   }
 
-  //TODO: semircircle not showing
+  //TODO: add exercise menu panel
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +57,7 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
                         color: AppColors.primaryText,
                         size: 38.4,
                       ),
-                      onPressed: () {},
+                      onPressed: widget.onMenuPressed,
                       padding: EdgeInsets.zero,
                       constraints: BoxConstraints(),
                     ),

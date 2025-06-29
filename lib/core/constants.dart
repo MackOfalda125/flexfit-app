@@ -62,6 +62,13 @@ class AppShadows {
     offset: Offset(0, 2),
     spreadRadius: 1,
   );
+
+  static const BoxShadow panelShadow = BoxShadow(
+    color: AppColors.primaryShadow,
+    blurRadius: 6,
+    offset: Offset(3, 0),
+    spreadRadius: 3,
+  );
 }
 
 

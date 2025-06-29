@@ -1,48 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
+import 'package:app/features/home/exercise_menu_panel.dart';
+import 'package:app/features/home/bottom_app_bar.dart';
 
-class TestScreen extends StatelessWidget {
+class TestScreen extends StatefulWidget {
   const TestScreen({super.key});
 
   @override
+  State<TestScreen> createState() => _TestScreenState();
+}
+
+class _TestScreenState extends State<TestScreen> {
+  bool _isMenuOpen = false;
+
+  void _toggleMenu() {
+    setState(() {
+      _isMenuOpen = !_isMenuOpen;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primaryText,
-      extendBodyBehindAppBar: true,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(0),
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              // Outer semicircle (border)
-              Container(
-                width: 160,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(100),
-                    topRight: Radius.circular(100),
-                  ),
-                ),
-              ),
-              // Inner semicircle (fill)
-              Container(
-                width: 160 - 14,
-                height: 80 - 7,
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(100),
-                    topRight: Radius.circular(100),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return Scaffold();
   }
 }
