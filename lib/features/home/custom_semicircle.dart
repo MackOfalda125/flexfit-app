@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
-import 'dart:math';
 
 class CustomSemicircle extends StatelessWidget {
-  final double score;
+  final int score;
 
   const CustomSemicircle({super.key, required this.score});
 
-  Color _getScoreColor(double score) {
+  Color _getScoreColor(int score) {
     if (score >= 85) {
       return AppColors.goodForm;
     } else if (score >= 60) {
