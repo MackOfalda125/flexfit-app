@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
 import 'package:app/features/home/bottom_app_bar.dart';
 import 'package:app/features/home/exercise_menu_panel.dart';
+import 'package:app/utils/camera_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,24 +25,39 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryText,
-      extendBody: true, // Needed to allow overlay over bottomNavigationBar
+      extendBody: true,
       body: Stack(
         children: [
           // Main content (camera preview or background)
-          Container(), // Replace with your actual UI
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: Container(
+              color: AppColors.primaryText,
+              height: MediaQuery.of(context).size.height - 64,
+              width: MediaQuery.of(context).size.width,
+              child: const CameraWidget(),
+            ),
+          ),
+          // Replace with your actual UI
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: CustomBottomAppBar(onMenuPressed: _toggleMenu, score: 90),
+            child: CustomBottomAppBar(
+              onMenuPressed: _toggleMenu,
+              score: 20,
+            ),
           ),
           // Dimmed background
           if (_isMenuOpen)
             GestureDetector(
               onTap: _toggleMenu,
               child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                  child: Container(color: Color(0x4C1B1B1B))),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                child: Container(color: Color(0x4C1B1B1B)),
+              ),
             ),
 
           // Sliding panel
