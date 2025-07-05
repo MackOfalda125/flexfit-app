@@ -33,6 +33,11 @@ migrate_working_dir/
 .pub/
 /build/
 
+#Android/Gradele related
+.gradle/
+android/local.properties,
+*.keystore
+
 # Symbolication related
 app.*.symbols
 
@@ -44,5 +49,3 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Exclude build artifacts in the android/ directory
-/android/build/
