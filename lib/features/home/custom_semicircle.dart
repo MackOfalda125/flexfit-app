@@ -7,7 +7,9 @@ class CustomSemicircle extends StatelessWidget {
   const CustomSemicircle({super.key, required this.score});
 
   Color _getScoreColor(int score) {
-    if (score >= 85) {
+    if (score == 0) {
+      return AppColors.primaryShadow;
+    } else if (score >= 85) {
       return AppColors.goodForm;
     } else if (score >= 60) {
       return AppColors.moderateForm;

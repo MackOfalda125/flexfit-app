@@ -5,8 +5,9 @@ import 'package:app/features/home/custom_semicircle.dart';
 
 class CustomBottomAppBar extends StatefulWidget {
   final VoidCallback onMenuPressed;
+  final int score;
 
-  const CustomBottomAppBar({super.key, required this.onMenuPressed});
+  const CustomBottomAppBar({super.key, required this.onMenuPressed, required this.score});
 
   @override
   State<CustomBottomAppBar> createState() => _CustomBottomAppBarState();
@@ -71,7 +72,7 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
               ),
             ),
           ),
-          Positioned(top: 0, child: CustomSemicircle(score: 90)),
+          Positioned(top: 0, child: CustomSemicircle(score: widget.score)),
         ],
       ),
     );
