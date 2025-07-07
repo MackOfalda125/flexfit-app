@@ -7,7 +7,11 @@ class CustomBottomAppBar extends StatefulWidget {
   final VoidCallback onMenuPressed;
   final int score;
 
-  const CustomBottomAppBar({super.key, required this.onMenuPressed, required this.score});
+  const CustomBottomAppBar({
+    super.key,
+    required this.onMenuPressed,
+    required this.score,
+  });
 
   @override
   State<CustomBottomAppBar> createState() => _CustomBottomAppBarState();
@@ -72,7 +76,13 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
               ),
             ),
           ),
-          Positioned(top: 0, child: CustomSemicircle(score: widget.score)),
+          Positioned(
+            top: 0,
+            child: RepaintBoundary(
+              key: const ValueKey('score_boundary'),
+              child: CustomSemicircle(score: widget.score),
+            ),
+          ),
         ],
       ),
     );

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:app/features/home/home_screen.dart';
-import 'package:app/utils/permissions.dart';
+import 'package:app/services/permissions.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -53,11 +53,14 @@ class _LoadingScreenState extends State<LoadingScreen> {
           children: [
             Text("LOGO", style: AppTextStyles.primaryText),
             SizedBox(height: 130),
-            LoadingAnimationWidget.discreteCircle(
-              color: AppColors.secondaryButton,
-              size: 80,
-              secondRingColor: AppColors.secondaryButton,
-              thirdRingColor: AppColors.primaryBackground,
+            RepaintBoundary(
+              key: const ValueKey('loading_boundary'),
+              child: LoadingAnimationWidget.discreteCircle(
+                color: AppColors.secondaryButton,
+                size: 80,
+                secondRingColor: AppColors.secondaryButton,
+                thirdRingColor: AppColors.primaryBackground,
+              ),
             ),
           ],
         ),

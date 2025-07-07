@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
 import 'package:app/features/home/bottom_app_bar.dart';
 import 'package:app/features/home/exercise_menu_panel.dart';
-import 'package:app/utils/camera_widget.dart';
+import 'package:app/features/home/camera_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,38 +28,31 @@ class _HomeScreenState extends State<HomeScreen> {
       extendBody: true,
       body: Stack(
         children: [
-          // Main content (camera preview or background)
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: Container(
-              color: AppColors.primaryText,
-              height: MediaQuery.of(context).size.height - 64,
-              width: MediaQuery.of(context).size.width,
+          // Camera Preview
+          Positioned.fill(
+            bottom: 64,
+            child: RepaintBoundary(
+              key: const ValueKey('camera_boundary'),
               child: const CameraWidget(),
             ),
           ),
-          // Replace with your actual UI
+          // Bottom App Bar
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: CustomBottomAppBar(
               onMenuPressed: _toggleMenu,
-              score: 20,
+              score: 60,
             ),
           ),
           // Dimmed background
           if (_isMenuOpen)
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: _toggleMenu,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                child: Container(color: Color(0x4C1B1B1B)),
-              ),
+              child: Container(color: Color(0x4C1B1B1B)),
             ),
-
           // Sliding panel
           AnimatedPositioned(
             duration: const Duration(milliseconds: 100),
