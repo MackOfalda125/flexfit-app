@@ -1,16 +1,20 @@
-import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
-import 'package:app/features/home/start_stop_button.dart';
 import 'package:app/features/home/custom_semicircle.dart';
+import 'package:app/features/home/start_stop_button.dart';
+import 'package:flutter/material.dart';
 
 class CustomBottomAppBar extends StatefulWidget {
   final VoidCallback onMenuPressed;
   final int score;
+  final VoidCallback onStartStop;
+  final bool isTracking;
 
   const CustomBottomAppBar({
     super.key,
     required this.onMenuPressed,
     required this.score,
+    required this.onStartStop,
+    required this.isTracking,
   });
 
   @override
@@ -18,18 +22,6 @@ class CustomBottomAppBar extends StatefulWidget {
 }
 
 class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
-  bool _isRunning = false;
-
-  void _toggleStartStop() {
-    setState(() {
-      _isRunning = !_isRunning;
-    });
-
-    // Add Start/Stop Logic Here
-  }
-
-  //TODO: add exercise menu panel
-
   @override
   Widget build(BuildContext context) {
     return BottomAppBar(
@@ -68,8 +60,8 @@ class _CustomBottomAppBarState extends State<CustomBottomAppBar> {
                   Padding(
                     padding: const EdgeInsets.only(right: 14),
                     child: StartStopButton(
-                      onTap: _toggleStartStop,
-                      isRunning: _isRunning,
+                      onTap: widget.onStartStop,
+                      isTracking: widget.isTracking,
                     ),
                   ),
                 ],

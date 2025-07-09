@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
+import 'package:flutter/material.dart';
 
 class StartStopButton extends StatelessWidget {
   final VoidCallback onTap;
-  final bool isRunning;
+  final bool isTracking;
 
   const StartStopButton({
     super.key,
     required this.onTap,
-    required this.isRunning,
+    required this.isTracking,
   });
 
   @override
@@ -20,12 +20,12 @@ class StartStopButton extends StatelessWidget {
         width: 70,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isRunning ? AppColors.stopButton : AppColors.primaryButton,
+          color: isTracking ? AppColors.stopButton : AppColors.primaryButton,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [AppShadows.buttonShadow],
         ),
         child: Text(
-          isRunning ? 'STOP' : 'START',
+          isTracking ? 'STOP' : 'START',
           style: AppTextStyles.buttonText,
         ),
       ),

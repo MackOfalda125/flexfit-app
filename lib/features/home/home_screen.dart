@@ -1,9 +1,10 @@
-import 'dart:ui';
-import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
 import 'package:app/features/home/bottom_app_bar.dart';
-import 'package:app/features/home/exercise_menu_panel.dart';
 import 'package:app/features/home/camera_widget.dart';
+import 'package:app/features/home/exercise_menu_panel.dart';
+import 'package:app/services/camera_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,11 +15,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isMenuOpen = false;
+  bool _isTracking = false;
 
   void _toggleMenu() {
     setState(() {
       _isMenuOpen = !_isMenuOpen;
     });
+  }
+
+  void _toggleTracking() {
+    setState(() {
+      _isTracking = !_isTracking;
+    });
+
+    final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
+    if (_isTracking) {
+      cameraProvider.startImageStream();
+    } else {
+      cameraProvider.stopImageStream();
+    }
   }
 
   @override
@@ -43,7 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: 0,
             child: CustomBottomAppBar(
               onMenuPressed: _toggleMenu,
-              score: 60,
+              score: 60, // Change to score variable later
+              onStartStop: _toggleTracking,
+              isTracking: _isTracking,
             ),
           ),
           // Dimmed background
