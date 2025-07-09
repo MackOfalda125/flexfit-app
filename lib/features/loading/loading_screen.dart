@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
-import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:app/features/home/home_screen.dart';
+import 'package:app/services/movenet_service.dart';
 import 'package:app/services/permissions.dart';
+import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -12,34 +13,33 @@ class LoadingScreen extends StatefulWidget {
 }
 
 class _LoadingScreenState extends State<LoadingScreen> {
-  //TODO: Camera Permission, Load Models
-
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    _handlePermissionsAndNavigate();
-
-    // Future.delayed(const Duration(seconds: 2), () {
-    //   Navigator.pushReplacement(
-    //     context,
-    //     MaterialPageRoute(builder: (context) => const HomeScreen()),
-    //   );
-    // });
+    _initApp();
   }
 
-  Future<void> _handlePermissionsAndNavigate() async {
-    bool granted = await PermissionsUtil.checkAndRequestCameraPermission(context);
-    if (!mounted) return;
-    if (granted) {
-      // Navigate after 2 seconds if permission is granted
-      Future.delayed(const Duration(seconds: 2), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      });
+  Future<void> _initApp() async {
+    // Camera Permission
+    bool granted = await PermissionsUtil.checkAndRequestCameraPermission(
+      context,
+    );
+    if (!mounted || !granted) return;
+
+    // Load MoveNet model
+    try {
+      await MoveNetService().loadModel();
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } catch (e) {
+      debugPrint('Error loading MoveNet model: $e');
     }
+
+    //TODO: Load  Exercise Models
   }
 
   @override
