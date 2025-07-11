@@ -7,14 +7,15 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _isInitializing = false;
   bool _isStreaming = false;
   bool _isActive = true;
+  CameraImage? _lastImage;
 
   CameraController? get controller => _controller;
 
   bool get isInitialized => _controller?.value.isInitialized ?? false;
 
-  CameraImage? _lastImage;
-
   CameraImage? get lastImage => _lastImage;
+
+  bool get isStreaming => _isStreaming;
 
   CameraProvider() {
     WidgetsBinding.instance.addObserver(this);
@@ -57,6 +58,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     });
 
     _isStreaming = true;
+    notifyListeners();
   }
 
   void stopImageStream() {
@@ -65,6 +67,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     _controller!.stopImageStream();
     _lastImage = null; // clear last image
     _isStreaming = false;
+    notifyListeners();
   }
 
   // Pause or resume camera based on app lifecycle

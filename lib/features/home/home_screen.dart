@@ -15,7 +15,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isMenuOpen = false;
-  bool _isTracking = false;
 
   void _toggleMenu() {
     setState(() {
@@ -24,12 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _toggleTracking() {
-    setState(() {
-      _isTracking = !_isTracking;
-    });
-
     final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
-    if (_isTracking) {
+    if (!cameraProvider.isStreaming) {
       cameraProvider.startImageStream();
     } else {
       cameraProvider.stopImageStream();
@@ -38,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTracking = context.watch<CameraProvider>().isStreaming;
+
     return Scaffold(
       backgroundColor: AppColors.primaryText,
       extendBody: true,
@@ -58,9 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: 0,
             child: CustomBottomAppBar(
               onMenuPressed: _toggleMenu,
-              score: 60, // Change to score variable later
+              score: 77, // Change to score variable later
               onStartStop: _toggleTracking,
-              isTracking: _isTracking,
+              isTracking: isTracking,
             ),
           ),
           // Dimmed background
