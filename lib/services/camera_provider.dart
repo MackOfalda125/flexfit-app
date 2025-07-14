@@ -34,7 +34,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       );
       _controller = CameraController(
         frontCamera,
-        ResolutionPreset.medium,
+        ResolutionPreset.medium, // TODO: change to low, test
         enableAudio: false,
       );
       await _controller!.initialize();

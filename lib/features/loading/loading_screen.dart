@@ -1,6 +1,6 @@
 import 'package:app/core/constants.dart';
 import 'package:app/features/home/home_screen.dart';
-import 'package:app/services/movenet_service.dart';
+import 'package:app/services/movenet/movenet_isolate_controller.dart';
 import 'package:app/services/permissions.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -28,7 +28,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
     // Load MoveNet model
     try {
-      await MoveNetService().loadModel();
+      await MoveNetIsolateController().initialize();
       if (!mounted) return;
 
       Navigator.pushReplacement(
@@ -36,7 +36,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } catch (e) {
-      debugPrint('Error loading MoveNet model: $e');
+      debugPrint('Error initializing MoveNet model: $e');
     }
 
     //TODO: Load  Exercise Models
