@@ -38,7 +38,9 @@ dependencies:
   permission_handler: ^12.0.1
   camera: ^0.11.1
   provider: ^6.1.5
-  tflite_flutter: ^0.11.0
+  tflite_flutter: ^0.9.1
+  image: ^3.3.0
+  tflite_flutter_helper: ^0.2.1
 
 dev_dependencies:
   flutter_test:
