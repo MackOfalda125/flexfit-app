@@ -51,3 +51,9 @@ app.*.map.json
 
 # DevTools
 devtools_options.yaml
+
+# Platform specific
+ios/
+macos/
+linux/
+windows/
