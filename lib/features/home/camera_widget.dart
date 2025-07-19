@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:app/services/camera_provider.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class CameraWidget extends StatefulWidget {
   const CameraWidget({super.key});
@@ -28,7 +28,7 @@ class _CameraWidgetState extends State<CameraWidget> {
 
     final screenWidth = MediaQuery.of(context).size.width;
     final aspectRatio = cameraProvider.controller!.value.aspectRatio;
-    final previewHeight = screenWidth * aspectRatio;
+    final previewHeight = (screenWidth * aspectRatio) - 64;
 
     return SizedBox(
       width: screenWidth,

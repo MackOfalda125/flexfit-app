@@ -1,9 +1,9 @@
 import 'package:app/core/constants.dart';
-import 'package:app/features/home/home_screen.dart';
 import 'package:app/services/movenet/movenet_isolate_controller.dart';
 import 'package:app/services/permissions.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:flutter/services.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -28,13 +28,14 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
     // Load MoveNet model
     try {
-      await MoveNetIsolateController().initialize();
+      final modelBytes = await rootBundle.load('assets/models/movenet_singlepose_lightning.tflite');
+      final modelBytesList = modelBytes.buffer.asUint8List();
+
+      await MoveNetIsolateController().initialize(modelBytesList);
+
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       debugPrint('Error initializing MoveNet model: $e');
     }

@@ -1,3 +1,4 @@
+import 'package:app/services/movenet/movenet_isolate_controller.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -8,6 +9,8 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _isStreaming = false;
   bool _isActive = true;
   CameraImage? _lastImage;
+  int _frameCount = 0;
+  bool _isProcessing = false;
 
   CameraController? get controller => _controller;
 
@@ -34,7 +37,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       );
       _controller = CameraController(
         frontCamera,
-        ResolutionPreset.medium, // TODO: change to low, test
+        ResolutionPreset.low, // TODO: change to low, test
         enableAudio: false,
       );
       await _controller!.initialize();
@@ -50,11 +53,23 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   void startImageStream() {
     if (!isInitialized || _isStreaming) return;
 
-    _controller!.startImageStream((CameraImage image) {
+    _controller!.startImageStream((CameraImage image) async {
       debugPrint("🟢 Frame received: ${image.width}x${image.height}");
-
       _lastImage = image;
-      // add frame processing here
+
+      // Process every 3rd frame
+      _frameCount++;
+      if (_frameCount % 3 == 0 && !_isProcessing) {
+        _isProcessing = true;
+
+        try {
+          await processFrame(image);
+        } catch (e) {
+          debugPrint("🔴 Error processing frame: $e");
+        } finally {
+          _isProcessing = false;
+        }
+      }
     });
 
     _isStreaming = true;
@@ -67,6 +82,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     _controller!.stopImageStream();
     _lastImage = null; // clear last image
     _isStreaming = false;
+    _isProcessing = false;
     notifyListeners();
   }
 
@@ -79,7 +95,6 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     switch (state) {
       case AppLifecycleState.paused:
-      case AppLifecycleState.hidden:
         _pauseCamera();
         break;
       case AppLifecycleState.resumed:
@@ -100,9 +115,11 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     _isActive = false;
 
     if (_isStreaming) stopImageStream();
+    _isProcessing = false;
     _controller?.dispose();
     _controller = null;
     _lastImage = null;
+
     notifyListeners();
   }
 
@@ -126,5 +143,16 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
+  }
+
+  Future<void> processFrame(CameraImage cameraImage) async {
+    try {
+      final controller = MoveNetIsolateController();
+      final result = await controller.runInference(cameraImage);
+      debugPrint("🟢 Inference result: $result");
+      // TODO: Pass keypoint to overlay and exercise model
+    } catch (e) {
+      debugPrint("🔴 Error processing frame: $e");
+    }
   }
 }

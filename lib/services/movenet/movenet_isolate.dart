@@ -1,10 +1,9 @@
 import 'dart:isolate';
+import 'dart:typed_data';
 
-import 'package:app/services/movenet/pose_estimator.dart';
+import 'package:app/utils/camera_image_converter.dart';
 import 'package:camera/camera.dart';
-import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:tflite_flutter_helper/tflite_flutter_helper.dart';
 
 class MoveNetIsolate {
   final CameraImage cameraImage;
@@ -13,26 +12,30 @@ class MoveNetIsolate {
   MoveNetIsolate(this.cameraImage, this.responsePort);
 }
 
-Future<void> movenetIsolateEntryPoint(SendPort sendPort) async {
+Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
+  final SendPort sendPort = args[0];
+  final Uint8List modelBytes = args[1];
+
   final ReceivePort receivePort = ReceivePort();
   sendPort.send(receivePort.sendPort);
 
-  final interpreter = await Interpreter.fromAsset(
-    'assets/models/movenet_singlepose_lightning.tflite',
+  final interpreter = await Interpreter.fromBuffer(
+    modelBytes,
     options: InterpreterOptions()..threads = 2,
   );
 
   receivePort.listen((message) async {
     if (message is MoveNetIsolate) {
       try {
-        final img.Image rgbImage = PoseEstimator.convertCameraImage(
-          message.cameraImage,
-        );
-        final TensorImage tensorImage = PoseEstimator.imageToTensorImage(
-          rgbImage,
-        );
-
-        final inputBuffer = [tensorImage.buffer];
+        // Use the optimized camera_image_converter
+        final inputUint8 = cameraImageToModelInput(message.cameraImage);
+        // Model expects shape [1, 192, 192, 3]
+        final inputBuffer = inputUint8.buffer.asUint8List().reshape([
+          1,
+          192,
+          192,
+          3,
+        ]);
         final outputBuffer = List.generate(
           1 * 1 * 17 * 3,
           (_) => 0.0,

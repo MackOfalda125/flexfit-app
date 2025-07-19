@@ -1,11 +1,9 @@
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 
 import 'movenet_isolate.dart';
-
-// TODO: kill isolate on app close
-// TODO: add reconnection logic on app resume
 
 class MoveNetIsolateController {
   static final MoveNetIsolateController _instance =
@@ -21,17 +19,22 @@ class MoveNetIsolateController {
 
   bool get isInitialized => _isInitialized;
 
-  Future<void> initialize() async {
+  Future<void> initialize(Uint8List modelBytes) async {
     if (_isInitialized) return;
 
     final ReceivePort receivePort = ReceivePort();
-    _isolate = await Isolate.spawn(
-      movenetIsolateEntryPoint,
-      receivePort.sendPort,
-    );
 
-    _sendPort = await receivePort.first as SendPort;
-    _isInitialized = true;
+    try {
+      _isolate = await Isolate.spawn(movenetIsolateEntryPoint, [
+        receivePort.sendPort,
+        modelBytes,
+      ]);
+      _sendPort = await receivePort.first as SendPort;
+      _isInitialized = true;
+      print("MoveNetIsolateController initialized successfully");
+    } catch (e) {
+      throw Exception('Failed to initialize MoveNetIsolateController: $e');
+    }
   }
 
   Future<List<List<double>>?> runInference(CameraImage cameraImage) async {

@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: 0,
             child: CustomBottomAppBar(
               onMenuPressed: _toggleMenu,
-              score: 77, // Change to score variable later
+              score: 55, // Change to score variable later
               onStartStop: _toggleTracking,
               isTracking: isTracking,
             ),
