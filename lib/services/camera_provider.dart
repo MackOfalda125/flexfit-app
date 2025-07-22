@@ -39,6 +39,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
         frontCamera,
         ResolutionPreset.low, // TODO: change to low, test
         enableAudio: false,
+        fps: 30, // Adjust as needed
       );
       await _controller!.initialize();
       _isActive = true;
@@ -147,8 +148,12 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> processFrame(CameraImage cameraImage) async {
     try {
-      final controller = MoveNetIsolateController();
-      final result = await controller.runInference(cameraImage);
+      final MoveNetIsolateController controller = MoveNetIsolateController();
+      final List<List<double>>? result = await controller.runInference(
+        cameraImage,
+      );
+      // Output is: [[x, y, confidence],...]
+
       debugPrint("🟢 Inference result: $result");
       // TODO: Pass keypoint to overlay and exercise model
     } catch (e) {

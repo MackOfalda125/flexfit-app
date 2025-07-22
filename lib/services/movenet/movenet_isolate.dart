@@ -1,9 +1,10 @@
 import 'dart:isolate';
 import 'dart:typed_data';
-
 import 'package:app/utils/camera_image_converter.dart';
+import 'package:app/utils/image_cropper.dart';
 import 'package:camera/camera.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:image/image.dart' as img;
 
 class MoveNetIsolate {
   final CameraImage cameraImage;
@@ -19,7 +20,7 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
   final ReceivePort receivePort = ReceivePort();
   sendPort.send(receivePort.sendPort);
 
-  final interpreter = await Interpreter.fromBuffer(
+  final interpreter = Interpreter.fromBuffer(
     modelBytes,
     options: InterpreterOptions()..threads = 2,
   );
@@ -27,15 +28,18 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
   receivePort.listen((message) async {
     if (message is MoveNetIsolate) {
       try {
-        // Use the optimized camera_image_converter
-        final inputUint8 = cameraImageToModelInput(message.cameraImage);
-        // Model expects shape [1, 192, 192, 3]
-        final inputBuffer = inputUint8.buffer.asUint8List().reshape([
-          1,
-          192,
-          192,
-          3,
-        ]);
+        // Convert CameraImage to img.Image
+        final img.Image rgbImage = cameraImageToImage(message.cameraImage);
+        // Crop and resize for MoveNet (using full image for now)
+        final img.Image cropped = cropAndResize(
+          image: rgbImage,
+          keypoints: List.generate(17, (_) => [0.0, 0.0, 0.0]), // dummy keypoints for full image
+          previousKeypoints: null,
+        );
+        // Convert to Uint8List (RGB order)
+        final Uint8List rgbBytes = imageToUint8List(cropped);
+        // Reshape to [1, 192, 192, 3] as Uint8List
+        final inputBuffer = rgbBytes.reshape([1, 192, 192, 3]);
         final outputBuffer = List.generate(
           1 * 1 * 17 * 3,
           (_) => 0.0,

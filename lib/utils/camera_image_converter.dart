@@ -3,19 +3,8 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 
-/// Converts a CameraImage to a Uint8List suitable for MoveNet (192x192x3 RGB uint8).
-Uint8List cameraImageToModelInput(CameraImage image) {
-  // 1. Convert YUV420 CameraImage to RGB img.Image
-  final img.Image rgbImage = _convertCameraImage(image);
-  // 2. Resize/crop to 192x192
-  final img.Image resized = img.copyResizeCropSquare(rgbImage, size: 192);
-  // 3. Convert to Uint8List in RGB order
-  return _imageToUint8List(resized);
-}
-
-// --- Internal helpers ---
-
-img.Image _convertCameraImage(CameraImage image) {
+/// Converts a CameraImage (YUV420) to an img.Image (RGB).
+img.Image cameraImageToImage(CameraImage image) {
   final img.Image rawImage = img.Image(
     width: image.width,
     height: image.height,
@@ -37,18 +26,8 @@ img.Image _convertCameraImage(CameraImage image) {
   return img.flipHorizontal(img.copyRotate(rawImage, angle: 270));
 }
 
-List<int> _yuv2rgb(int y, int u, int v) {
-  final int u1 = u - 128;
-  final int v1 = v - 128;
-
-  final int r = (y + ((1436 * v1) >> 10)).clamp(0, 255);
-  final int g = (y - ((352 * u1 + 731 * v1) >> 10)).clamp(0, 255);
-  final int b = (y + ((1815 * u1) >> 10)).clamp(0, 255);
-
-  return [r, g, b];
-}
-
-Uint8List _imageToUint8List(img.Image image) {
+/// Converts an img.Image (RGB) to Uint8List in RGB order (no alpha).
+Uint8List imageToUint8List(img.Image image) {
   final int width = image.width;
   final int height = image.height;
   final Uint8List bytes = Uint8List(width * height * 3);
@@ -61,4 +40,15 @@ Uint8List _imageToUint8List(img.Image image) {
     // skip A
   }
   return bytes;
+}
+
+List<int> _yuv2rgb(int y, int u, int v) {
+  final int u1 = u - 128;
+  final int v1 = v - 128;
+
+  final int r = (y + ((1436 * v1) >> 10)).clamp(0, 255);
+  final int g = (y - ((352 * u1 + 731 * v1) >> 10)).clamp(0, 255);
+  final int b = (y + ((1815 * u1) >> 10)).clamp(0, 255);
+
+  return [r, g, b];
 }
