@@ -2,7 +2,9 @@ import 'package:app/core/constants.dart';
 import 'package:app/features/home/bottom_app_bar.dart';
 import 'package:app/features/home/camera_widget.dart';
 import 'package:app/features/home/exercise_menu_panel.dart';
+import 'package:app/features/home/sampleinference.dart'; // Sample inference data
 import 'package:app/services/camera_provider.dart';
+import 'package:app/utils/skeletal_overlay_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isMenuOpen = false;
+  List<List<double>> inferenceList = sampleInference;
 
   void _toggleMenu() {
     setState(() {
@@ -33,7 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTracking = context.watch<CameraProvider>().isStreaming;
+    final bool isTracking = context.watch<CameraProvider>().isStreaming;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height - 64;
+    final int score = 41;
 
     return Scaffold(
       backgroundColor: AppColors.primaryText,
@@ -45,7 +51,14 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: 64,
             child: RepaintBoundary(
               key: const ValueKey('camera_boundary'),
-              child: const CameraWidget(),
+              child: CustomPaint(
+                foregroundPainter: SkeletalOverlayPainter(
+                  inferenceList: inferenceList,
+                  canvasWidth: screenWidth,
+                  canvasHeight: screenHeight,
+                ),
+                child: const CameraWidget(),
+              ),
             ),
           ),
           // Bottom App Bar
@@ -55,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: 0,
             child: CustomBottomAppBar(
               onMenuPressed: _toggleMenu,
-              score: 55, // Change to score variable later
+              score: score,
               onStartStop: _toggleTracking,
               isTracking: isTracking,
             ),
