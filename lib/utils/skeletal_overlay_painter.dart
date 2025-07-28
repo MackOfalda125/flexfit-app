@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class SkeletalOverlayPainter extends CustomPainter {
-  final List<List<double>> inferenceList;
+  final List<List<double>>? inferenceList;
   final double canvasWidth;
   final double canvasHeight;
   final double showPointConfidence;
@@ -60,7 +60,7 @@ class SkeletalOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (inferenceList.isEmpty) return;
+    if (inferenceList == null) return;
 
     final List<Offset> pointsGreen = [];
     final List<Offset> pointsRed = [];
@@ -82,8 +82,8 @@ class SkeletalOverlayPainter extends CustomPainter {
     List<Offset> pointsGreen,
     List<Offset> pointsRed,
   ) {
-    for (int i = 0; i < inferenceList.length; i++) {
-      final point = inferenceList[i];
+    for (int i = 0; i < inferenceList!.length; i++) {
+      final point = inferenceList![i];
       if (point.length < 3) continue;
 
       final x = point[0];
@@ -109,13 +109,13 @@ class SkeletalOverlayPainter extends CustomPainter {
       final point1Index = edge[0];
       final point2Index = edge[1];
 
-      if (point1Index >= inferenceList.length ||
-          point2Index >= inferenceList.length) {
+      if (point1Index >= inferenceList!.length ||
+          point2Index >= inferenceList!.length) {
         continue;
       }
 
-      final point1 = inferenceList[point1Index];
-      final point2 = inferenceList[point2Index];
+      final point1 = inferenceList![point1Index];
+      final point2 = inferenceList![point2Index];
 
       if (point1.length < 3 || point2.length < 3) continue;
 

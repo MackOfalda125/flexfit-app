@@ -5,20 +5,22 @@ import 'package:flutter/widgets.dart';
 
 class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   CameraController? _controller;
+  CameraController? get controller => _controller;
+
   bool _isInitializing = false;
+
   bool _isStreaming = false;
+  bool get isStreaming => _isStreaming;
+
   bool _isActive = true;
-  CameraImage? _lastImage;
+
   int _frameCount = 0;
   bool _isProcessing = false;
 
-  CameraController? get controller => _controller;
-
   bool get isInitialized => _controller?.value.isInitialized ?? false;
 
-  CameraImage? get lastImage => _lastImage;
-
-  bool get isStreaming => _isStreaming;
+  List<List<double>>? _keypoints;
+  List<List<double>>? get keypoints => _keypoints;
 
   CameraProvider() {
     WidgetsBinding.instance.addObserver(this);
@@ -37,7 +39,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       );
       _controller = CameraController(
         frontCamera,
-        ResolutionPreset.low, // TODO: change to low, test
+        ResolutionPreset.medium, // TODO: change to low, test
         enableAudio: false,
         fps: 30, // Adjust as needed
       );
@@ -56,7 +58,6 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     _controller!.startImageStream((CameraImage image) async {
       debugPrint("🟢 Frame received: ${image.width}x${image.height}");
-      _lastImage = image;
 
       // Process every 3rd frame
       _frameCount++;
@@ -81,9 +82,9 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (!isInitialized || !_isStreaming) return;
 
     _controller!.stopImageStream();
-    _lastImage = null; // clear last image
     _isStreaming = false;
     _isProcessing = false;
+    _keypoints = null;
     notifyListeners();
   }
 
@@ -119,7 +120,6 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     _isProcessing = false;
     _controller?.dispose();
     _controller = null;
-    _lastImage = null;
 
     notifyListeners();
   }
@@ -148,16 +148,24 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> processFrame(CameraImage cameraImage) async {
     try {
-      final MoveNetIsolateController controller = MoveNetIsolateController();
-      final List<List<double>>? result = await controller.runInference(
+      // Store the current keypoints as previous keypoints before processing
+      final List<List<double>>? previousKeypoints = _keypoints;
+
+      final MoveNetIsolateController movenetController =
+          MoveNetIsolateController();
+      final List<List<double>>? result = await movenetController.runInference(
         cameraImage,
+        previousKeypoints, // Pass the stored previous keypoints for intelligent cropping
       );
       // Output is: [[x, y, confidence],...]
-
+      _keypoints = result;
+      notifyListeners();
       debugPrint("🟢 Inference result: $result");
-      // TODO: Pass keypoint to overlay and exercise model
+      if (previousKeypoints != null) {
+        debugPrint("🟢 Used previous keypoints for intelligent cropping");
+      }
     } catch (e) {
-      debugPrint("🔴 Error processing frame: $e");
+      debugPrint("🔴 Error in processFrame: $e");
     }
   }
 }
