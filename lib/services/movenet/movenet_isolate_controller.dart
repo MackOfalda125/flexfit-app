@@ -2,6 +2,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
 
 import 'movenet_isolate.dart';
 
@@ -23,11 +24,15 @@ class MoveNetIsolateController {
     if (_isInitialized) return;
 
     final ReceivePort receivePort = ReceivePort();
+    
+    // Get the root isolate token for background isolate communication
+    final RootIsolateToken rootIsolateToken = RootIsolateToken.instance!;
 
     try {
       _isolate = await Isolate.spawn(movenetIsolateEntryPoint, [
         receivePort.sendPort,
         modelBytes,
+        rootIsolateToken,
       ]);
       _sendPort = await receivePort.first as SendPort;
       _isInitialized = true;
@@ -37,13 +42,16 @@ class MoveNetIsolateController {
     }
   }
 
-  Future<List<List<double>>?> runInference(CameraImage cameraImage) async {
+  Future<List<List<double>>?> runInference(
+    CameraImage cameraImage, [
+    List<List<double>>? previousKeypoints,
+  ]) async {
     if (!_isInitialized) {
       throw Exception('MoveNetIsolateController is not initialized');
     }
 
     final ReceivePort responsePort = ReceivePort();
-    _sendPort.send(MoveNetIsolate(cameraImage, responsePort.sendPort));
+    _sendPort.send(MoveNetIsolate(cameraImage, responsePort.sendPort, previousKeypoints));
     final result = await responsePort.first;
 
     if (result == null) return null;
@@ -54,8 +62,6 @@ class MoveNetIsolateController {
     if (_isInitialized) {
       _isolate.kill(priority: Isolate.immediate);
       _isInitialized = false;
-    } else {
-      throw StateError("Isolate not initialized");
     }
   }
 }

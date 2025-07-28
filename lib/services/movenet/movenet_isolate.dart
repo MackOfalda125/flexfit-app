@@ -1,21 +1,26 @@
 import 'dart:isolate';
-import 'dart:typed_data';
-import 'package:app/utils/camera_image_converter.dart';
-import 'package:app/utils/image_cropper.dart';
+
+import 'package:app/services/native_image_processor.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:image/image.dart' as img;
 
 class MoveNetIsolate {
   final CameraImage cameraImage;
   final SendPort responsePort;
+  final List<List<double>>? previousKeypoints;
 
-  MoveNetIsolate(this.cameraImage, this.responsePort);
+  MoveNetIsolate(this.cameraImage, this.responsePort, [this.previousKeypoints]);
 }
 
 Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
   final SendPort sendPort = args[0];
   final Uint8List modelBytes = args[1];
+  final RootIsolateToken rootIsolateToken = args[2];
+
+  // Initialize the binary messenger for the background isolate
+  // This is required for plugins to work in background isolates
+  BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
 
   final ReceivePort receivePort = ReceivePort();
   sendPort.send(receivePort.sendPort);
@@ -28,17 +33,20 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
   receivePort.listen((message) async {
     if (message is MoveNetIsolate) {
       try {
-        // Convert CameraImage to img.Image
-        final img.Image rgbImage = cameraImageToImage(message.cameraImage);
-        // Crop and resize for MoveNet (using full image for now)
-        final img.Image cropped = cropAndResize(
-          image: rgbImage,
-          keypoints: List.generate(17, (_) => [0.0, 0.0, 0.0]), // dummy keypoints for full image
-          previousKeypoints: null,
+        final Uint8List yuvBytes = message.cameraImage.planes.fold<Uint8List>(
+          Uint8List(0),
+          (prev, plane) => Uint8List.fromList([...prev, ...plane.bytes]),
         );
-        // Convert to Uint8List (RGB order)
-        final Uint8List rgbBytes = imageToUint8List(cropped);
-        // Reshape to [1, 192, 192, 3] as Uint8List
+        final int width = message.cameraImage.width;
+        final int height = message.cameraImage.height;
+
+        final Uint8List rgbBytes = await NativeImageProcessor.processYUVPlanes(
+          yuvBytes,
+          width,
+          height,
+          message.previousKeypoints,
+        );
+        // Reshape to [1, 192, 192, 3]
         final inputBuffer = rgbBytes.reshape([1, 192, 192, 3]);
         final outputBuffer = List.generate(
           1 * 1 * 17 * 3,

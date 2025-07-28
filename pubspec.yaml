@@ -35,10 +35,6 @@ dependencies:
   camera: ^0.11.1
   provider: 6.1.5
   tflite_flutter: ^0.11.0
-  image: ^4.5.4
-  quiver: ^3.2.2
-  meta: ^1.16.0
-  tuple: ^2.0.2
   image_processing_plugin:
     path: ./image_processing_plugin
 
