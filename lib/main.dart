@@ -8,6 +8,9 @@ import 'package:app/features/home/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(
     ChangeNotifierProvider(
       create: (_) => CameraProvider(),

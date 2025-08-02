@@ -16,9 +16,9 @@ class MockImageProcessingPluginPlatform
   Future<Uint8List> processYUVPlanes(
     Uint8List yuvBytes,
     int width,
-    int height,
-    List<List<double>>? previousKeypoints,
-  ) {
+    int height, [
+    int sensorOrientation = 0,
+  ]) {
     // Return a mock RGB byte array for testing
     return Future.value(Uint8List(width * height * 3));
   }
@@ -49,7 +49,6 @@ void main() {
       testYuvBytes,
       10,
       10,
-      null,
     );
 
     expect(result, isA<Uint8List>());

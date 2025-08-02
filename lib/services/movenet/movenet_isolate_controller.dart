@@ -1,5 +1,4 @@
 import 'dart:isolate';
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
@@ -44,14 +43,14 @@ class MoveNetIsolateController {
 
   Future<List<List<double>>?> runInference(
     CameraImage cameraImage, [
-    List<List<double>>? previousKeypoints,
+    int sensorOrientation = 0,
   ]) async {
     if (!_isInitialized) {
       throw Exception('MoveNetIsolateController is not initialized');
     }
 
     final ReceivePort responsePort = ReceivePort();
-    _sendPort.send(MoveNetIsolate(cameraImage, responsePort.sendPort, previousKeypoints));
+    _sendPort.send(MoveNetIsolate(cameraImage, responsePort.sendPort, sensorOrientation));
     final result = await responsePort.first;
 
     if (result == null) return null;

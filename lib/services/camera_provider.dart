@@ -1,11 +1,14 @@
+import 'dart:async';
+
 import 'package:app/services/movenet/movenet_isolate_controller.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
-  CameraController? _controller;
-  CameraController? get controller => _controller;
+  CameraController? _cameraController;
+  CameraController? get controller => _cameraController;
 
   bool _isInitializing = false;
 
@@ -17,7 +20,10 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   int _frameCount = 0;
   bool _isProcessing = false;
 
-  bool get isInitialized => _controller?.value.isInitialized ?? false;
+  int _sensorOrientation = 0;
+  int get sensorOrientation => _sensorOrientation;
+
+  bool get isInitialized => _cameraController?.value.isInitialized ?? false;
 
   List<List<double>>? _keypoints;
   List<List<double>>? get keypoints => _keypoints;
@@ -32,18 +38,30 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     _isInitializing = true;
 
     try {
+      // Lock device orientation to portrait up (camera at top)
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+
       final cameras = await availableCameras();
       final frontCamera = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.front,
+        (c) =>
+            c.lensDirection ==
+            CameraLensDirection.back, // change to back for emulator testing
         orElse: () => cameras.first,
       );
-      _controller = CameraController(
+
+      // Store sensor orientation for image processing
+      _sensorOrientation = frontCamera.sensorOrientation;
+
+      _cameraController = CameraController(
         frontCamera,
         ResolutionPreset.medium, // TODO: change to low, test
         enableAudio: false,
         fps: 30, // Adjust as needed
       );
-      await _controller!.initialize();
+      await _cameraController!.initialize();
+
       _isActive = true;
       notifyListeners();
     } catch (e) {
@@ -53,47 +71,69 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  void startImageStream() {
+  void startFrameCapture() {
     if (!isInitialized || _isStreaming) return;
 
-    _controller!.startImageStream((CameraImage image) async {
-      debugPrint("🟢 Frame received: ${image.width}x${image.height}");
+    try {
+      _cameraController!.startImageStream((CameraImage image) {
+        // Process every 3rd frame
+        _frameCount++;
+        if (_frameCount % 3 == 0 && _isStreaming) {
+          // Double-check processing flag to ensure only one frame at a time
+          if (_isProcessing) {
+            debugPrint("🟡 Skipping frame - already processing");
+            return;
+          }
 
-      // Process every 3rd frame
-      _frameCount++;
-      if (_frameCount % 3 == 0 && !_isProcessing) {
-        _isProcessing = true;
+          _isProcessing = true;
+          _frameCount =
+              0; // Reset frame count immediately when starting processing
 
-        try {
-          await processFrame(image);
-        } catch (e) {
-          debugPrint("🔴 Error processing frame: $e");
-        } finally {
-          _isProcessing = false;
+          // Use unawaited to avoid blocking the stream
+          unawaited(
+            processFrame(image)
+                .catchError((error) {
+                  debugPrint("🔴 Error processing frame: $error");
+                })
+                .whenComplete(() {
+                  if (_isStreaming) {
+                    _isProcessing = false;
+                  }
+                }),
+          );
         }
-      }
-    });
+      });
 
-    _isStreaming = true;
-    notifyListeners();
+      _isStreaming = true;
+      _frameCount = 0; // Reset frame count when starting
+      notifyListeners();
+    } catch (e) {
+      debugPrint("🔴 Error starting image stream: $e");
+      _isStreaming = false;
+      notifyListeners();
+    }
   }
 
-  void stopImageStream() {
+  void stopFrameCapture() {
     if (!isInitialized || !_isStreaming) return;
 
-    _controller!.stopImageStream();
-    _isStreaming = false;
-    _isProcessing = false;
-    _keypoints = null;
-    notifyListeners();
+    try {
+      _cameraController!.stopImageStream();
+    } catch (e) {
+      debugPrint("🔴 Error stopping image stream: $e");
+    } finally {
+      _isStreaming = false;
+      _isProcessing = false;
+      _keypoints = null;
+      _frameCount = 0; // Reset frame count when stopping
+      notifyListeners();
+    }
   }
 
   // Pause or resume camera based on app lifecycle
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
-    debugPrint("### AppLifecycleState changed: $state");
 
     switch (state) {
       case AppLifecycleState.paused:
@@ -109,29 +149,23 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void _pauseCamera() {
     if (!_isActive) {
-      debugPrint("*** Camera is already paused.");
       return;
     }
 
     debugPrint("*** Pausing camera.");
     _isActive = false;
 
-    if (_isStreaming) stopImageStream();
+    if (_isStreaming) stopFrameCapture();
     _isProcessing = false;
-    _controller?.dispose();
-    _controller = null;
+    _cameraController?.dispose();
+    _cameraController = null;
 
     notifyListeners();
   }
 
   Future<void> _resumeCamera() async {
-    if (_isActive) {
-      debugPrint("*** Camera is already active.");
-      return;
-    }
-
-    if (_isInitializing) {
-      debugPrint("*** Camera is initializing, waiting for completion.");
+    if (_isActive || _isInitializing) {
+      debugPrint("*** Camera is already active or initializing.");
       return;
     }
 
@@ -142,28 +176,31 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
+    _cameraController?.dispose();
+
+    // Reset device orientation
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
     super.dispose();
   }
 
   Future<void> processFrame(CameraImage cameraImage) async {
     try {
-      // Store the current keypoints as previous keypoints before processing
-      final List<List<double>>? previousKeypoints = _keypoints;
-
       final MoveNetIsolateController movenetController =
           MoveNetIsolateController();
       final List<List<double>>? result = await movenetController.runInference(
         cameraImage,
-        previousKeypoints, // Pass the stored previous keypoints for intelligent cropping
+        _sensorOrientation, // Pass the sensor orientation for proper rotation
       );
       // Output is: [[x, y, confidence],...]
       _keypoints = result;
       notifyListeners();
       debugPrint("🟢 Inference result: $result");
-      if (previousKeypoints != null) {
-        debugPrint("🟢 Used previous keypoints for intelligent cropping");
-      }
     } catch (e) {
       debugPrint("🔴 Error in processFrame: $e");
     }

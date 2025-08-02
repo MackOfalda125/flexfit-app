@@ -31,9 +31,9 @@ abstract class ImageProcessingPluginPlatform extends PlatformInterface {
   Future<Uint8List> processYUVPlanes(
     Uint8List yuvBytes,
     int width,
-    int height,
-    List<List<double>>? previousKeypoints,
-  ) {
+    int height, [
+    int sensorOrientation = 0,
+  ]) {
     throw UnimplementedError('processYUVPlanes() has not been implemented.');
   }
 }

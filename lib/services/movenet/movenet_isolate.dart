@@ -8,9 +8,13 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 class MoveNetIsolate {
   final CameraImage cameraImage;
   final SendPort responsePort;
-  final List<List<double>>? previousKeypoints;
+  final int sensorOrientation;
 
-  MoveNetIsolate(this.cameraImage, this.responsePort, [this.previousKeypoints]);
+  MoveNetIsolate(
+    this.cameraImage,
+    this.responsePort, [
+    this.sensorOrientation = 0,
+  ]);
 }
 
 Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
@@ -27,7 +31,9 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
 
   final interpreter = Interpreter.fromBuffer(
     modelBytes,
-    options: InterpreterOptions()..threads = 2,
+    options: InterpreterOptions()
+      ..threads = 2
+      ..useNnApiForAndroid = false,
   );
 
   receivePort.listen((message) async {
@@ -44,7 +50,7 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
           yuvBytes,
           width,
           height,
-          message.previousKeypoints,
+          message.sensorOrientation,
         );
         // Reshape to [1, 192, 192, 3]
         final inputBuffer = rgbBytes.reshape([1, 192, 192, 3]);

@@ -26,9 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _toggleTracking() {
     final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
     if (!cameraProvider.isStreaming) {
-      cameraProvider.startImageStream();
+      cameraProvider.startFrameCapture();
     } else {
-      cameraProvider.stopImageStream();
+      cameraProvider.stopFrameCapture();
     }
   }
 
@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isTracking = context.watch<CameraProvider>().isStreaming;
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height - 64;
-    final int score = 25;
+    final int score = 55;
     final List<List<double>>? keypoints = context
         .watch<CameraProvider>()
         .keypoints;
@@ -47,18 +47,24 @@ class _HomeScreenState extends State<HomeScreen> {
       extendBody: true,
       body: Stack(
         children: [
-          // Camera Preview
-          Positioned.fill(
+          // Camera Preview with movie bar effect
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
             bottom: 64,
-            child: RepaintBoundary(
-              key: const ValueKey('camera_boundary'),
-              child: CustomPaint(
-                foregroundPainter: SkeletalOverlayPainter(
-                  inferenceList: keypoints,
-                  canvasWidth: screenWidth,
-                  canvasHeight: screenHeight,
+            child: Container(
+              color: AppColors.primaryBackground,
+              child: RepaintBoundary(
+                key: const ValueKey('camera_boundary'),
+                child: CustomPaint(
+                  foregroundPainter: SkeletalOverlayPainter(
+                    inferenceList: keypoints,
+                    canvasWidth: screenWidth,
+                    canvasHeight: screenHeight,
+                  ),
+                  child: const CameraWidget(),
                 ),
-                child: const CameraWidget(),
               ),
             ),
           ),

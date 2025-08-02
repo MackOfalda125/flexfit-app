@@ -26,14 +26,6 @@ class _CameraWidgetState extends State<CameraWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final aspectRatio = cameraProvider.controller!.value.aspectRatio;
-    final previewHeight = (screenWidth * aspectRatio) - 64;
-
-    return SizedBox(
-      width: screenWidth,
-      height: previewHeight,
-      child: CameraPreview(cameraProvider.controller!),
-    );
+    return CameraPreview(cameraProvider.controller!);
   }
 }

@@ -10,14 +10,14 @@ class ImageProcessingPlugin {
   Future<Uint8List> processYUVPlanes(
     Uint8List yuvBytes,
     int width,
-    int height,
-    List<List<double>>? previousKeypoints,
-  ) {
+    int height, [
+    int sensorOrientation = 0,
+  ]) {
     return ImageProcessingPluginPlatform.instance.processYUVPlanes(
       yuvBytes,
       width,
       height,
-      previousKeypoints,
+      sensorOrientation,
     );
   }
 }

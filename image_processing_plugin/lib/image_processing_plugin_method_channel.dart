@@ -20,14 +20,14 @@ class MethodChannelImageProcessingPlugin extends ImageProcessingPluginPlatform {
   Future<Uint8List> processYUVPlanes(
     Uint8List yuvBytes,
     int width,
-    int height,
-    List<List<double>>? previousKeypoints,
-  ) async {
+    int height, [
+    int sensorOrientation = 0,
+  ]) async {
     final result = await methodChannel.invokeMethod<Uint8List>('processYUVPlanes', {
       'yuvBytes': yuvBytes,
       'width': width,
       'height': height,
-      'previousKeypoints': previousKeypoints,
+      'sensorOrientation': sensorOrientation,
     });
     return result!;
   }
