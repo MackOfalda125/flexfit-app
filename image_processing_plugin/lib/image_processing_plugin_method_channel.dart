@@ -17,18 +17,22 @@ class MethodChannelImageProcessingPlugin extends ImageProcessingPluginPlatform {
   }
 
   @override
-  Future<Uint8List> processYUVPlanes(
-    Uint8List yuvBytes,
+  Future<Uint8List> processYUVPlanesWithStride(
+    List<Uint8List> planeBytes,
+    List<int> bytesPerRow,
+    List<int> bytesPerPixel,
     int width,
     int height, [
     int sensorOrientation = 0,
   ]) async {
-    final result = await methodChannel.invokeMethod<Uint8List>('processYUVPlanes', {
-      'yuvBytes': yuvBytes,
+    final result = await methodChannel.invokeMethod<Uint8List>('processYUVPlanesWithStride', {
+      'planeBytes': planeBytes,
+      'bytesPerRow': bytesPerRow,
+      'bytesPerPixel': bytesPerPixel,
       'width': width,
       'height': height,
       'sensorOrientation': sensorOrientation,
     });
-    return result!;
+    return result ?? Uint8List(0);
   }
 }

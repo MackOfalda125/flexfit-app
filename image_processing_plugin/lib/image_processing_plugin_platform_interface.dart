@@ -25,15 +25,17 @@ abstract class ImageProcessingPluginPlatform extends PlatformInterface {
   }
 
   Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
+    throw UnimplementedError('getPlatformVersion() has not been implemented.');
   }
 
-  Future<Uint8List> processYUVPlanes(
-    Uint8List yuvBytes,
+  Future<Uint8List> processYUVPlanesWithStride(
+    List<Uint8List> planeBytes,
+    List<int> bytesPerRow,
+    List<int> bytesPerPixel,
     int width,
     int height, [
     int sensorOrientation = 0,
   ]) {
-    throw UnimplementedError('processYUVPlanes() has not been implemented.');
+    throw UnimplementedError('processYUVPlanesWithStride() has not been implemented.');
   }
 }

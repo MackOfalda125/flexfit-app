@@ -13,8 +13,10 @@ class MockImageProcessingPluginPlatform
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override
-  Future<Uint8List> processYUVPlanes(
-    Uint8List yuvBytes,
+  Future<Uint8List> processYUVPlanesWithStride(
+    List<Uint8List> planeBytes,
+    List<int> bytesPerRow,
+    List<int> bytesPerPixel,
     int width,
     int height, [
     int sensorOrientation = 0,
@@ -39,14 +41,19 @@ void main() {
     expect(await imageProcessingPlugin.getPlatformVersion(), '42');
   });
 
-  test('processYUVPlanes', () async {
+  test('processYUVPlanesWithStride', () async {
     ImageProcessingPlugin imageProcessingPlugin = ImageProcessingPlugin();
     MockImageProcessingPluginPlatform fakePlatform = MockImageProcessingPluginPlatform();
     ImageProcessingPluginPlatform.instance = fakePlatform;
 
-    final testYuvBytes = Uint8List(100);
-    final result = await imageProcessingPlugin.processYUVPlanes(
-      testYuvBytes,
+    final testPlaneBytes = [Uint8List(100), Uint8List(25), Uint8List(25)];
+    final testBytesPerRow = [10, 5, 5];
+    final testBytesPerPixel = [1, 1, 1];
+    
+    final result = await imageProcessingPlugin.processYUVPlanesWithStride(
+      testPlaneBytes,
+      testBytesPerRow,
+      testBytesPerPixel,
       10,
       10,
     );

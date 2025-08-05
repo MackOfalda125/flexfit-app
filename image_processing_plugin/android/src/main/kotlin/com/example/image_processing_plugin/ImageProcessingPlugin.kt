@@ -7,59 +7,54 @@ import io.flutter.plugin.common.MethodChannel
 class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private lateinit var channel: MethodChannel
 
-    // Cache for rotation indices to improve performance
-    private data class RotationCacheKey(val width: Int, val height: Int, val orientation: Int)
-
-    private val rotationIndicesCache = mutableMapOf<RotationCacheKey, IntArray>()
-
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(binding.binaryMessenger, "image_processing_plugin")
         channel.setMethodCallHandler(this)
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        if (call.method == "processYUVPlanes") {
-            val yuvBytes = call.argument<ByteArray>("yuvBytes")!!
-            val width = call.argument<Int>("width")!!
-            val height = call.argument<Int>("height")!!
-            val sensorOrientation = call.argument<Int>("sensorOrientation") ?: 0
+        when (call.method) {
+            "processYUVPlanesWithStride" -> {
+                val planeBytes = call.argument<List<ByteArray>>("planeBytes")!!
+                val bytesPerRow = call.argument<List<Int>>("bytesPerRow")!!
+                val bytesPerPixel = call.argument<List<Int>>("bytesPerPixel")!!
+                val width = call.argument<Int>("width")!!
+                val height = call.argument<Int>("height")!!
+                val sensorOrientation = call.argument<Int>("sensorOrientation") ?: 0
 
-            println("DEBUG: Processing ${width}x${height} image with ${sensorOrientation}° orientation")
-            println("DEBUG: YUV data size: ${yuvBytes.size}")
-            println("DEBUG: Expected YUV size: ${width * height * 3 / 2}")
-            println("DEBUG: Expected RGB size: ${width * height * 3}")
+                println("DEBUG: Orientation: $sensorOrientation")
 
-            try {
-                // 1. Convert YUV to RGB bytes (with rotation and flip) - no cropping
-                val rgbBytes = yuv420ToRgbBytes(yuvBytes, width, height, sensorOrientation)
+                try {
+                    // 1. Extract YUV data with proper stride handling
+                    val yuvBytes = extractYUVDataWithStride(planeBytes, bytesPerRow, bytesPerPixel, width, height)
 
-                // 2. Resize to 192x192 (square with padding if necessary)
-                val finalRgbBytes = resizeRgbBytesToSquare(rgbBytes, width, height, 192)
+                    // 2. Convert YUV to RGB bytes
+                    val rgbBytes = yuv420ToRgbBytes(yuvBytes, width, height)
 
-                result.success(finalRgbBytes)
-            } catch (e: Exception) {
-                println("DEBUG: Error processing image: ${e.message}")
-                e.printStackTrace()
-                result.error("PROCESSING_ERROR", "Failed to process YUV image: ${e.message}", null)
+                    // 3. Rotate RGB based on sensor orientation
+                    val rotatedRgbBytes = rotateRgbBytes(rgbBytes, width, height, sensorOrientation)
+                    val rotatedWidth = if (sensorOrientation == 90 || sensorOrientation == 270) height else width
+                    val rotatedHeight = if (sensorOrientation == 90 || sensorOrientation == 270) width else height
+
+                    // 4. Resize to 192x192 (square with padding if necessary)
+                    val finalRgbBytes = resizeRgbBytesToSquare(rotatedRgbBytes, rotatedWidth, rotatedHeight, 192)
+
+                    result.success(finalRgbBytes)
+                } catch (e: Exception) {
+                    result.error("PROCESSING_ERROR", "Failed to process YUV image with stride: ${e.message}", null)
+                }
             }
-        } else {
-            result.notImplemented()
+            else -> {
+                result.notImplemented()
+            }
         }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
-        // Clear cache to prevent memory leaks
-        rotationIndicesCache.clear()
     }
 
-    /**
-     * Clear rotation indices cache to free memory
-     * Call this when memory usage becomes a concern
-     */
-    fun clearRotationCache() {
-        rotationIndicesCache.clear()
-    }
+
 
     /**
      * Convert YUV420 to RGB bytes
@@ -67,124 +62,28 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private fun yuv420ToRgbBytes(
         yuvBytes: ByteArray,
         width: Int,
-        height: Int,
-        sensorOrientation: Int
+        height: Int
     ): ByteArray {
-        // ROTATION LOGIC COMMENTED OUT FOR TESTING
-        // // Determine rotated dimensions
-        // val (rotatedWidth, rotatedHeight) = when (sensorOrientation) {
-        //     90, 270 -> Pair(height, width)  // Dimensions swap for 90° and 270°
-        //     else -> Pair(width, height)     // Dimensions stay the same for 0° and 180°
-        // }
-
-        // Use original dimensions without rotation
-        val rotatedWidth = width
-        val rotatedHeight = height
-
-        val rgbBytes = ByteArray(rotatedWidth * rotatedHeight * 3)
+        val rgbBytes = ByteArray(width * height * 3)
         val ySize = width * height
         val uvSize = ySize / 4
-
-        println("DEBUG: YUV data size: ${yuvBytes.size}")
-        println("DEBUG: Expected YUV size for ${width}x${height}: ${ySize + uvSize * 2}")
-        println("DEBUG: Using original dimensions: ${rotatedWidth}x${rotatedHeight} (rotation disabled)")
 
         // For YUV420, the data is typically: Y plane + U plane + V plane
         // Add bounds checking to prevent ArrayIndexOutOfBoundsException
         val expectedYuvSize = ySize + uvSize * 2
         if (yuvBytes.size != expectedYuvSize) {
-            println("DEBUG: YUV size mismatch - expected: $expectedYuvSize, actual: ${yuvBytes.size}")
             // If the YUV data is smaller than expected, we need to handle this gracefully
             if (yuvBytes.size < expectedYuvSize) {
-                throw IllegalArgumentException("YUV data too small - expected: $expectedYuvSize, actual: ${yuvBytes.size}")
+                // Return a black image instead of throwing an exception
+                return ByteArray(width * height * 3) { 0 }
+            }
+            // If larger, truncate to expected size
+            if (yuvBytes.size > expectedYuvSize) {
+                val truncatedYuvBytes = ByteArray(expectedYuvSize)
+                System.arraycopy(yuvBytes, 0, truncatedYuvBytes, 0, expectedYuvSize)
+                return yuv420ToRgbBytes(truncatedYuvBytes, width, height)
             }
         }
-
-        // ROTATION LOGIC COMMENTED OUT FOR TESTING
-        // // Get or compute rotation indices from cache for performance
-        // val cacheKey = RotationCacheKey(width, height, sensorOrientation)
-        // val rotatedIndices = rotationIndicesCache.getOrPut(cacheKey) {
-        //     IntArray(rotatedWidth * rotatedHeight) { i ->
-        //         val rotatedY = i / rotatedWidth
-        //         val rotatedX = i % rotatedWidth
-        //         when (sensorOrientation) {
-        //             270 -> {
-        //                 // Rotate 270° clockwise: (x, y) -> (y, width-1-x)
-        //                 val originalY = rotatedX
-        //                 val originalX = width - 1 - rotatedY
-        //                 originalY * width + originalX
-        //             }
-        //
-        //             90 -> {
-        //                 // Rotate 90° clockwise: (x, y) -> (height-1-y, x)
-        //                 val originalY = height - 1 - rotatedX
-        //                 val originalX = rotatedY
-        //                 originalY * width + originalX
-        //             }
-        //
-        //             180 -> {
-        //                 // Rotate 180°: (x, y) -> (height-1-y, width-1-x)
-        //                 val originalY = height - 1 - rotatedY
-        //                 val originalX = width - 1 - rotatedX
-        //                 originalY * width + originalX
-        //             }
-        //
-        //             else -> {
-        //                 // No rotation: (x, y) -> (x, y)
-        //                 val originalY = rotatedY
-        //                 val originalX = rotatedX
-        //                 originalY * width + originalX
-        //             }
-        //         }
-        //     }
-        // }
-
-        // ROTATION LOGIC COMMENTED OUT FOR TESTING
-        // // Process each pixel using precomputed indices - OPTIMIZED for performance
-        // for (rotatedIndex in 0 until rotatedWidth * rotatedHeight) {
-        //     val originalPixelIndex = rotatedIndices[rotatedIndex]
-        //     val originalY = originalPixelIndex / width
-        //     val originalX = originalPixelIndex % width
-        //
-        //     // Ensure bounds checking for safety
-        //     if (originalY >= height || originalX >= width) {
-        //         println("DEBUG: Out of bounds - originalY: $originalY, originalX: $originalX, height: $height, width: $width")
-        //         continue
-        //     }
-        //
-        //     val yIndex = originalY * width + originalX
-        //     val uvIndex = (originalY / 2) * (width / 2) + (originalX / 2)
-        //
-        //     // Ensure UV indices are within bounds
-        //     if (yIndex >= ySize || uvIndex >= uvSize) {
-        //         println("DEBUG: UV bounds check failed - yIndex: $yIndex, uvIndex: $uvIndex, ySize: $ySize, uvSize: $uvSize")
-        //         continue
-        //     }
-        //
-        //     val yVal = yuvBytes[yIndex].toInt() and 0xFF
-        //     val uVal = yuvBytes[ySize + uvIndex].toInt() and 0xFF
-        //     val vVal = yuvBytes[ySize + uvSize + uvIndex].toInt() and 0xFF
-        //
-        //     // YUV to RGB conversion - OPTIMIZED with precomputed constants
-        //     val yValF = yVal.toFloat()
-        //     val uValF = (uVal - 128).toFloat()
-        //     val vValF = (vVal - 128).toFloat()
-        //
-        //     var r = (yValF + 1.370705f * vValF).toInt()
-        //     var g = (yValF - 0.698001f * vValF - 0.337633f * uValF).toInt()
-        //     var b = (yValF + 1.732446f * uValF).toInt()
-        //
-        //     // Clamp values
-        //     r = r.coerceIn(0, 255)
-        //     g = g.coerceIn(0, 255)
-        //     b = b.coerceIn(0, 255)
-        //
-        //     // Write to rotated position using precomputed index
-        //     val finalIndex = rotatedIndex * 3
-        //     rgbBytes[finalIndex] = r.toByte()
-        //     rgbBytes[finalIndex + 1] = g.toByte()
-        //     rgbBytes[finalIndex + 2] = b.toByte()
-        // }
 
         // SIMPLE DIRECT CONVERSION WITHOUT ROTATION
         for (y in 0 until height) {
@@ -194,7 +93,6 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
                 // Ensure UV indices are within bounds
                 if (yIndex >= ySize || uvIndex >= uvSize) {
-                    println("DEBUG: UV bounds check failed - yIndex: $yIndex, uvIndex: $uvIndex, ySize: $ySize, uvSize: $uvSize")
                     continue
                 }
 
@@ -227,8 +125,80 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         return rgbBytes
     }
 
+    /**
+     * Extract YUV data with proper stride handling
+     */
+    private fun extractYUVDataWithStride(
+        planeBytes: List<ByteArray>,
+        bytesPerRow: List<Int>,
+        bytesPerPixel: List<Int>,
+        width: Int,
+        height: Int
+    ): ByteArray {
+        if (planeBytes.size < 3) {
+            // Fallback to simple concatenation if not enough planes
+            return planeBytes.fold(ByteArray(0)) { acc, plane ->
+                acc + plane
+            }
+        }
 
+        val yPlane = planeBytes[0]
+        val uPlane = planeBytes[1]
+        val vPlane = planeBytes[2]
 
+        val yBytesPerRow = bytesPerRow[0]
+        val uBytesPerRow = bytesPerRow[1]
+        val vBytesPerRow = bytesPerRow[2]
+
+        val yBytesPerPixel = bytesPerPixel[0]
+        val uBytesPerPixel = bytesPerPixel[1]
+        val vBytesPerPixel = bytesPerPixel[2]
+
+        // Extract Y plane data (remove stride padding)
+        val yBytes = extractPlaneData(yPlane, width, height, yBytesPerRow, yBytesPerPixel)
+
+        // Extract U and V plane data (remove stride padding)
+        val uBytes = extractPlaneData(uPlane, width / 2, height / 2, uBytesPerRow, uBytesPerPixel)
+        val vBytes = extractPlaneData(vPlane, width / 2, height / 2, vBytesPerRow, vBytesPerPixel)
+
+        // Combine Y, U, V planes
+        val result = yBytes + uBytes + vBytes
+        return result
+    }
+
+    /**
+     * Extract plane data removing stride padding
+     */
+    private fun extractPlaneData(
+        bytes: ByteArray,
+        width: Int,
+        height: Int,
+        bytesPerRow: Int,
+        bytesPerPixel: Int
+    ): ByteArray {
+        // If no stride padding, return the bytes as is
+        if (bytesPerRow == width * bytesPerPixel) {
+            return bytes
+        }
+
+        println("DEBUG: Stride padding detected - bytesPerRow: $bytesPerRow, expected: ${width * bytesPerPixel}")
+        
+        // Remove stride padding by copying only the valid data
+        val result = ByteArray(width * height)
+        var resultIndex = 0
+
+        for (row in 0 until height) {
+            val rowStart = row * bytesPerRow
+            for (col in 0 until width) {
+                val sourceIndex = rowStart + col * bytesPerPixel
+                if (sourceIndex < bytes.size) {
+                    result[resultIndex++] = bytes[sourceIndex]
+                }
+            }
+        }
+
+        return result
+    }
 
 
     /**
@@ -301,6 +271,68 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
 
         return resizedRgbBytes
+    }
+
+    /**
+     * Rotate RGB bytes based on sensor orientation
+     * sensorOrientation: 0, 90, 180, or 270 degrees clockwise
+     */
+    private fun rotateRgbBytes(
+        rgbBytes: ByteArray,
+        width: Int,
+        height: Int,
+        sensorOrientation: Int
+    ): ByteArray {
+        // Handle 0 degrees (no rotation)
+        if (sensorOrientation == 0) {
+            return rgbBytes
+        }
+
+        // For 90 and 270 degrees, dimensions are swapped
+        val isDimensionSwap = sensorOrientation == 90 || sensorOrientation == 270
+        val rotatedWidth = if (isDimensionSwap) height else width
+        val rotatedHeight = if (isDimensionSwap) width else height
+        
+        val rotatedRgbBytes = ByteArray(rotatedWidth * rotatedHeight * 3)
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val srcIndex = (y * width + x) * 3
+                
+                // Calculate destination coordinates based on rotation
+                val dstX: Int
+                val dstY: Int
+                when (sensorOrientation) {
+                    90 -> {
+                        dstX = height - 1 - y
+                        dstY = x
+                    }
+                    180 -> {
+                        dstX = width - 1 - x
+                        dstY = height - 1 - y
+                    }
+                    270 -> {
+                        dstX = y
+                        dstY = width - 1 - x
+                    }
+                    else -> {
+                        dstX = x
+                        dstY = y
+                    }
+                }
+                
+                val dstIndex = (dstY * rotatedWidth + dstX) * 3
+
+                // Ensure we don't write beyond the bounds
+                if (dstIndex + 2 < rotatedRgbBytes.size) {
+                    rotatedRgbBytes[dstIndex] = rgbBytes[srcIndex]     // R
+                    rotatedRgbBytes[dstIndex + 1] = rgbBytes[srcIndex + 1] // G
+                    rotatedRgbBytes[dstIndex + 2] = rgbBytes[srcIndex + 2] // B
+                }
+            }
+        }
+
+        return rotatedRgbBytes
     }
 
 }

@@ -32,26 +32,30 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
   final interpreter = Interpreter.fromBuffer(
     modelBytes,
     options: InterpreterOptions()
-      ..threads = 2
+      ..threads = 4 // Change and test
       ..useNnApiForAndroid = false,
   );
 
   receivePort.listen((message) async {
     if (message is MoveNetIsolate) {
       try {
-        final Uint8List yuvBytes = message.cameraImage.planes.fold<Uint8List>(
-          Uint8List(0),
-          (prev, plane) => Uint8List.fromList([...prev, ...plane.bytes]),
-        );
         final int width = message.cameraImage.width;
         final int height = message.cameraImage.height;
 
-        final Uint8List rgbBytes = await NativeImageProcessor.processYUVPlanes(
-          yuvBytes,
+        // Extract plane information for stride handling
+        final planeBytes = message.cameraImage.planes.map((plane) => plane.bytes).toList();
+        final bytesPerRow = message.cameraImage.planes.map((plane) => plane.bytesPerRow).toList();
+        final bytesPerPixel = message.cameraImage.planes.map((plane) => plane.bytesPerPixel ?? 1).toList();
+
+        final Uint8List rgbBytes = await NativeImageProcessor.processYUVPlanesWithStride(
+          planeBytes,
+          bytesPerRow,
+          bytesPerPixel,
           width,
           height,
           message.sensorOrientation,
         );
+        
         // Reshape to [1, 192, 192, 3]
         final inputBuffer = rgbBytes.reshape([1, 192, 192, 3]);
         final outputBuffer = List.generate(

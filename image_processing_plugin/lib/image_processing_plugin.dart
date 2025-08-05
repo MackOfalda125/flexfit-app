@@ -7,14 +7,18 @@ class ImageProcessingPlugin {
     return ImageProcessingPluginPlatform.instance.getPlatformVersion();
   }
 
-  Future<Uint8List> processYUVPlanes(
-    Uint8List yuvBytes,
+  Future<Uint8List> processYUVPlanesWithStride(
+    List<Uint8List> planeBytes,
+    List<int> bytesPerRow,
+    List<int> bytesPerPixel,
     int width,
     int height, [
     int sensorOrientation = 0,
   ]) {
-    return ImageProcessingPluginPlatform.instance.processYUVPlanes(
-      yuvBytes,
+    return ImageProcessingPluginPlatform.instance.processYUVPlanesWithStride(
+      planeBytes,
+      bytesPerRow,
+      bytesPerPixel,
       width,
       height,
       sensorOrientation,

@@ -8,11 +8,13 @@ import 'package:flutter/widgets.dart';
 
 class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   CameraController? _cameraController;
+
   CameraController? get controller => _cameraController;
 
   bool _isInitializing = false;
 
   bool _isStreaming = false;
+
   bool get isStreaming => _isStreaming;
 
   bool _isActive = true;
@@ -21,11 +23,13 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _isProcessing = false;
 
   int _sensorOrientation = 0;
+
   int get sensorOrientation => _sensorOrientation;
 
   bool get isInitialized => _cameraController?.value.isInitialized ?? false;
 
   List<List<double>>? _keypoints;
+
   List<List<double>>? get keypoints => _keypoints;
 
   CameraProvider() {
@@ -51,16 +55,22 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
         orElse: () => cameras.first,
       );
 
-      // Store sensor orientation for image processing
       _sensorOrientation = frontCamera.sensorOrientation;
+
+      // _sensorOrientation = 0; // uncomment for testing without rotation
 
       _cameraController = CameraController(
         frontCamera,
         ResolutionPreset.medium, // TODO: change to low, test
         enableAudio: false,
         fps: 30, // Adjust as needed
+        imageFormatGroup: ImageFormatGroup.yuv420,
       );
       await _cameraController!.initialize();
+
+      await _cameraController!.lockCaptureOrientation(
+        DeviceOrientation.portraitUp,
+      );
 
       _isActive = true;
       notifyListeners();
@@ -105,7 +115,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       });
 
       _isStreaming = true;
-      _frameCount = 0; // Reset frame count when starting
+      _frameCount = 0;
       notifyListeners();
     } catch (e) {
       debugPrint("🔴 Error starting image stream: $e");
@@ -125,7 +135,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       _isStreaming = false;
       _isProcessing = false;
       _keypoints = null;
-      _frameCount = 0; // Reset frame count when stopping
+      _frameCount = 0;
       notifyListeners();
     }
   }
@@ -191,16 +201,19 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> processFrame(CameraImage cameraImage) async {
     try {
+      // Get current sensor orientation from camera controller
+
       final MoveNetIsolateController movenetController =
           MoveNetIsolateController();
       final List<List<double>>? result = await movenetController.runInference(
         cameraImage,
         _sensorOrientation, // Pass the sensor orientation for proper rotation
       );
-      // Output is: [[x, y, confidence],...]
       _keypoints = result;
       notifyListeners();
-      debugPrint("🟢 Inference result: $result");
+      debugPrint(
+        "🟢 Inference completed (image: ${cameraImage.width}x${cameraImage.height}, orientation: $_sensorOrientation°)",
+      );
     } catch (e) {
       debugPrint("🔴 Error in processFrame: $e");
     }
