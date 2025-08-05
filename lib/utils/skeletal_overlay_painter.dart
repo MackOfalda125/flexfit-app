@@ -86,8 +86,9 @@ class SkeletalOverlayPainter extends CustomPainter {
       final point = inferenceList![i];
       if (point.length < 3) continue;
 
-      final x = point[0];
-      final y = point[1];
+      // Use original point without rotation
+      final x = point[1]; // MoveNet's second value is X
+      final y = point[0]; // MoveNet's first value is Y
       final confidence = point[2];
 
       if (confidence > showPointConfidence) {
@@ -119,13 +120,19 @@ class SkeletalOverlayPainter extends CustomPainter {
 
       if (point1.length < 3 || point2.length < 3) continue;
 
+      // Use original points without rotation
+      final x1 = point1[1]; // MoveNet's second value is X
+      final y1 = point1[0]; // MoveNet's first value is Y
       final confidence1 = point1[2];
+
+      final x2 = point2[1]; // MoveNet's second value is X
+      final y2 = point2[0]; // MoveNet's first value is Y
       final confidence2 = point2[2];
 
       if (confidence1 > showPointConfidence &&
           confidence2 > showPointConfidence) {
-        final vertex1 = Offset(point1[0] * size.width, point1[1] * size.height);
-        final vertex2 = Offset(point2[0] * size.width, point2[1] * size.height);
+        final vertex1 = Offset(x1 * size.width, y1 * size.height);
+        final vertex2 = Offset(x2 * size.width, y2 * size.height);
 
         final paint =
             (confidence1 > correctPointConfidence &&
