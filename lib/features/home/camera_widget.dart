@@ -3,26 +3,14 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class CameraWidget extends StatefulWidget {
+class CameraWidget extends StatelessWidget {
   const CameraWidget({super.key});
-
-  @override
-  State<CameraWidget> createState() => _CameraWidgetState();
-}
-
-class _CameraWidgetState extends State<CameraWidget> {
-  @override
-  void initState() {
-    super.initState();
-    final provider = Provider.of<CameraProvider>(context, listen: false);
-    provider.initCamera();
-  }
 
   @override
   Widget build(BuildContext context) {
     final cameraProvider = Provider.of<CameraProvider>(context);
 
-    if (!cameraProvider.isInitialized) {
+    if (!cameraProvider.isInitialized || cameraProvider.controller == null) {
       return const Center(child: CircularProgressIndicator());
     }
 

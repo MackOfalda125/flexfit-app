@@ -19,7 +19,10 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   bool _isActive = true;
 
+  double aspectRatio = 1.5;
+
   int _frameCount = 0;
+
   bool _isProcessing = false;
 
   int _sensorOrientation = 0;
@@ -42,22 +45,17 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     _isInitializing = true;
 
     try {
-      // Lock device orientation to portrait up (camera at top)
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
       ]);
 
       final cameras = await availableCameras();
       final frontCamera = cameras.firstWhere(
-        (c) =>
-            c.lensDirection ==
-            CameraLensDirection.back, // change to back for emulator testing
+        (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
 
       _sensorOrientation = frontCamera.sensorOrientation;
-
-      // _sensorOrientation = 0; // uncomment for testing without rotation
 
       _cameraController = CameraController(
         frontCamera,
@@ -71,6 +69,8 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       await _cameraController!.lockCaptureOrientation(
         DeviceOrientation.portraitUp,
       );
+
+      aspectRatio = _cameraController!.value.aspectRatio;
 
       _isActive = true;
       notifyListeners();
@@ -96,8 +96,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
           }
 
           _isProcessing = true;
-          _frameCount =
-              0; // Reset frame count immediately when starting processing
+          _frameCount = 0;
 
           // Use unawaited to avoid blocking the stream
           unawaited(
@@ -201,13 +200,11 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> processFrame(CameraImage cameraImage) async {
     try {
-      // Get current sensor orientation from camera controller
-
       final MoveNetIsolateController movenetController =
           MoveNetIsolateController();
       final List<List<double>>? result = await movenetController.runInference(
         cameraImage,
-        _sensorOrientation, // Pass the sensor orientation for proper rotation
+        _sensorOrientation,
       );
       _keypoints = result;
       notifyListeners();

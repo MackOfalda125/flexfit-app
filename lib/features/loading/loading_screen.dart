@@ -1,10 +1,12 @@
 import 'package:app/core/constants.dart';
+import 'package:app/services/camera_provider.dart';
 import 'package:app/services/movenet/movenet_isolate_controller.dart';
 import 'package:app/utils/permissions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 
 //TODO: Match dialog styles with the rest of the app
 
@@ -33,6 +35,12 @@ class _LoadingScreenState extends State<LoadingScreen> {
     switch (permission) {
       case CameraPermissionStatus.granted:
         debugPrint("Camera permission granted");
+
+        final cameraProvider = Provider.of<CameraProvider>(
+          context,
+          listen: false,
+        );
+        await cameraProvider.initCamera();
         break;
       case CameraPermissionStatus.denied:
         debugPrint("Camera permission denied");
