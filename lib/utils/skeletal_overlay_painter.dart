@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:app/core/constants.dart';
 import 'package:flutter/material.dart';
 
 class SkeletalOverlayPainter extends CustomPainter {
@@ -8,6 +9,7 @@ class SkeletalOverlayPainter extends CustomPainter {
   final double canvasHeight;
   final double showPointConfidence;
   final double correctPointConfidence;
+  final int sensorOrientation;
 
   SkeletalOverlayPainter({
     required this.inferenceList,
@@ -15,26 +17,27 @@ class SkeletalOverlayPainter extends CustomPainter {
     required this.canvasHeight,
     this.showPointConfidence = 0.2,
     this.correctPointConfidence = 0.4,
+    this.sensorOrientation = 0,
   });
 
   // Paint configurations
   final pointGreen = Paint()
-    ..color = Colors.green
+    ..color = AppColors.goodForm
     ..strokeCap = StrokeCap.round
-    ..strokeWidth = 12;
+    ..strokeWidth = 8;
 
   final pointRed = Paint()
-    ..color = Colors.red.shade900
+    ..color = AppColors.poorForm
     ..strokeCap = StrokeCap.round
-    ..strokeWidth = 12;
+    ..strokeWidth = 8;
 
   final edgeGreen = Paint()
-    ..color = Colors.lightGreen
-    ..strokeWidth = 6;
+    ..color = AppColors.goodForm
+    ..strokeWidth = 4;
 
   final edgeRed = Paint()
-    ..color = Colors.red.shade300
-    ..strokeWidth = 6;
+    ..color = AppColors.poorForm
+    ..strokeWidth = 4;
 
   // MoveNet keypoint connections (17 keypoints)
   static const List<List<int>> edges = [
@@ -86,10 +89,14 @@ class SkeletalOverlayPainter extends CustomPainter {
       final point = inferenceList![i];
       if (point.length < 3) continue;
 
-      // Use original point without rotation
-      final x = point[1]; // MoveNet's second value is X
-      final y = point[0]; // MoveNet's first value is Y
+      double x = point[1];
+      final y = point[0];
       final confidence = point[2];
+
+      // Flip horizontally if sensor orientation is 270 degrees (front camera)
+      if (sensorOrientation == 270) {
+        x = 1.0 - x;
+      }
 
       if (confidence > showPointConfidence) {
         final offset = Offset(x * size.width, y * size.height);
@@ -121,13 +128,19 @@ class SkeletalOverlayPainter extends CustomPainter {
       if (point1.length < 3 || point2.length < 3) continue;
 
       // Use original points without rotation
-      final x1 = point1[1]; // MoveNet's second value is X
-      final y1 = point1[0]; // MoveNet's first value is Y
+      double x1 = point1[1];
+      final y1 = point1[0];
       final confidence1 = point1[2];
 
-      final x2 = point2[1]; // MoveNet's second value is X
-      final y2 = point2[0]; // MoveNet's first value is Y
+      double x2 = point2[1];
+      final y2 = point2[0];
       final confidence2 = point2[2];
+
+      // Flip horizontally if sensor orientation is 270 degrees (front camera)
+      if (sensorOrientation == 270) {
+        x1 = 1.0 - x1;
+        x2 = 1.0 - x2;
+      }
 
       if (confidence1 > showPointConfidence &&
           confidence2 > showPointConfidence) {
