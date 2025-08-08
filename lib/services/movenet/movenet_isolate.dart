@@ -32,7 +32,8 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
   final interpreter = Interpreter.fromBuffer(
     modelBytes,
     options: InterpreterOptions()
-      ..threads = 4 // Change and test
+      ..threads =
+          4 // Change and test
       ..useNnApiForAndroid = false,
   );
 
@@ -43,19 +44,35 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
         final int height = message.cameraImage.height;
 
         // Extract plane information for stride handling
-        final planeBytes = message.cameraImage.planes.map((plane) => plane.bytes).toList();
-        final bytesPerRow = message.cameraImage.planes.map((plane) => plane.bytesPerRow).toList();
-        final bytesPerPixel = message.cameraImage.planes.map((plane) => plane.bytesPerPixel ?? 1).toList();
+        final planeBytes = message.cameraImage.planes
+            .map((plane) => plane.bytes)
+            .toList();
+        final bytesPerRow = message.cameraImage.planes
+            .map((plane) => plane.bytesPerRow)
+            .toList();
+        final bytesPerPixel = message.cameraImage.planes
+            .map((plane) => plane.bytesPerPixel ?? 1)
+            .toList();
 
-        final Uint8List rgbBytes = await NativeImageProcessor.processYUVPlanesWithStride(
-          planeBytes,
-          bytesPerRow,
-          bytesPerPixel,
-          width,
-          height,
-          message.sensorOrientation,
-        );
-        
+        final List<dynamic> result =
+            await NativeImageProcessor.processYUVPlanesWithStride(
+              planeBytes,
+              bytesPerRow,
+              bytesPerPixel,
+              width,
+              height,
+              message.sensorOrientation,
+            );
+
+        // Check if we got valid results
+        if (result.isEmpty || result[0] == null || result[1] == null) {
+          message.responsePort.send(null);
+          return;
+        }
+
+        final Uint8List rgbBytes = result[0] as Uint8List;
+        final double paddingRatio = result[1] as double;
+
         // Reshape to [1, 192, 192, 3]
         final inputBuffer = rgbBytes.reshape([1, 192, 192, 3]);
         final outputBuffer = List.generate(
@@ -64,9 +81,9 @@ Future<void> movenetIsolateEntryPoint(List<dynamic> args) async {
         ).reshape([1, 1, 17, 3]);
 
         interpreter.run(inputBuffer, outputBuffer);
-        message.responsePort.send(outputBuffer[0][0]);
+        message.responsePort.send([outputBuffer[0][0], paddingRatio]);
       } catch (e) {
-        print('Error during inference: $e');
+        print('Isolate: Error during inference: $e');
         message.responsePort.send(null);
       }
     }

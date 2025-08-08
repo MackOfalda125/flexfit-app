@@ -23,7 +23,7 @@ class MoveNetIsolateController {
     if (_isInitialized) return;
 
     final ReceivePort receivePort = ReceivePort();
-    
+
     // Get the root isolate token for background isolate communication
     final RootIsolateToken rootIsolateToken = RootIsolateToken.instance!;
 
@@ -41,7 +41,7 @@ class MoveNetIsolateController {
     }
   }
 
-  Future<List<List<double>>?> runInference(
+  Future<List<dynamic>?> runInference(
     CameraImage cameraImage, [
     int sensorOrientation = 0,
   ]) async {
@@ -50,11 +50,14 @@ class MoveNetIsolateController {
     }
 
     final ReceivePort responsePort = ReceivePort();
-    _sendPort.send(MoveNetIsolate(cameraImage, responsePort.sendPort, sensorOrientation));
+    _sendPort.send(
+      MoveNetIsolate(cameraImage, responsePort.sendPort, sensorOrientation),
+    );
     final result = await responsePort.first;
 
     if (result == null) return null;
-    return (result as List).cast<List<double>>();
+
+    return result as List<dynamic>;
   }
 
   void dispose() {

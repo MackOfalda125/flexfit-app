@@ -22,8 +22,6 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 val height = call.argument<Int>("height")!!
                 val sensorOrientation = call.argument<Int>("sensorOrientation") ?: 0
 
-                println("DEBUG: Orientation: $sensorOrientation")
-
                 try {
                     // 1. Extract YUV data with proper stride handling
                     val yuvBytes = extractYUVDataWithStride(planeBytes, bytesPerRow, bytesPerPixel, width, height)
@@ -36,10 +34,16 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     val rotatedWidth = if (sensorOrientation == 90 || sensorOrientation == 270) height else width
                     val rotatedHeight = if (sensorOrientation == 90 || sensorOrientation == 270) width else height
 
-                    // 4. Resize to 192x192 (square with padding if necessary)
-                    val finalRgbBytes = resizeRgbBytesToSquare(rotatedRgbBytes, rotatedWidth, rotatedHeight, 192)
+                    // 4. Resize to 192x192 (add padding if necessary) and get padding info
+                    val processingResult = resizeRgbBytesToSquare(rotatedRgbBytes, rotatedWidth, rotatedHeight, 192)
 
-                    result.success(finalRgbBytes)
+                    // Return both the processed image and padding ratio
+                    val resultList = listOf(
+                        processingResult.first, // ByteArray
+                        processingResult.second // Double
+                    )
+
+                    result.success(resultList)
                 } catch (e: Exception) {
                     result.error("PROCESSING_ERROR", "Failed to process YUV image with stride: ${e.message}", null)
                 }
@@ -54,11 +58,7 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         channel.setMethodCallHandler(null)
     }
 
-
-
-    /**
-     * Convert YUV420 to RGB bytes
-     */
+    // Convert YUV420 to RGB bytes
     private fun yuv420ToRgbBytes(
         yuvBytes: ByteArray,
         width: Int,
@@ -85,7 +85,6 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             }
         }
 
-        // SIMPLE DIRECT CONVERSION WITHOUT ROTATION
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val yIndex = y * width + x
@@ -125,9 +124,7 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         return rgbBytes
     }
 
-    /**
-     * Extract YUV data with proper stride handling
-     */
+    // Extrac YUB data with proper stride handling
     private fun extractYUVDataWithStride(
         planeBytes: List<ByteArray>,
         bytesPerRow: List<Int>,
@@ -166,9 +163,7 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         return result
     }
 
-    /**
-     * Extract plane data removing stride padding
-     */
+    // Extract plane data removing stride padding
     private fun extractPlaneData(
         bytes: ByteArray,
         width: Int,
@@ -180,8 +175,6 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         if (bytesPerRow == width * bytesPerPixel) {
             return bytes
         }
-
-        println("DEBUG: Stride padding detected - bytesPerRow: $bytesPerRow, expected: ${width * bytesPerPixel}")
         
         // Remove stride padding by copying only the valid data
         val result = ByteArray(width * height)
@@ -200,19 +193,16 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         return result
     }
 
-
-    /**
-     * Resize RGB bytes to square with padding if necessary
-     */
+    // Resize RGB bytes to square with padding if necessary
     private fun resizeRgbBytesToSquare(
         rgbBytes: ByteArray,
         width: Int,
         height: Int,
         targetSize: Int
-    ): ByteArray {
+    ): Pair<ByteArray, Double> {
         // If already square, just resize
         if (width == height) {
-            return resizeRgbBytes(rgbBytes, width, height, targetSize, targetSize)
+            return Pair(resizeRgbBytes(rgbBytes, width, height, targetSize, targetSize), 0.0)
         }
 
         // Create a square with padding
@@ -240,13 +230,11 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             }
         }
 
-        // Resize to target size
-        return resizeRgbBytes(squareRgbBytes, size, size, targetSize, targetSize)
+        // Resize to target size and return both the image and the padding
+        return Pair(resizeRgbBytes(squareRgbBytes, size, size, targetSize, targetSize), left.toDouble() / size)
     }
 
-    /**
-     * Resize RGB bytes using nearest neighbor interpolation
-     */
+    // Resize RGB bytes using nearest neighbor interpolation
     private fun resizeRgbBytes(
         rgbBytes: ByteArray,
         srcWidth: Int,
@@ -273,10 +261,7 @@ class ImageProcessingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         return resizedRgbBytes
     }
 
-    /**
-     * Rotate RGB bytes based on sensor orientation
-     * sensorOrientation: 0, 90, 180, or 270 degrees clockwise
-     */
+    // Rotate RGB byte based on sensor orientation
     private fun rotateRgbBytes(
         rgbBytes: ByteArray,
         width: Int,

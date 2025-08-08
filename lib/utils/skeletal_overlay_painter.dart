@@ -10,6 +10,7 @@ class SkeletalOverlayPainter extends CustomPainter {
   final double showPointConfidence;
   final double correctPointConfidence;
   final int sensorOrientation;
+  final double paddingRatio;
 
   SkeletalOverlayPainter({
     required this.inferenceList,
@@ -18,6 +19,7 @@ class SkeletalOverlayPainter extends CustomPainter {
     this.showPointConfidence = 0.2,
     this.correctPointConfidence = 0.4,
     this.sensorOrientation = 0,
+    this.paddingRatio = 0,
   });
 
   // Paint configurations
@@ -98,8 +100,14 @@ class SkeletalOverlayPainter extends CustomPainter {
         x = 1.0 - x;
       }
 
+      // Apply padding ratio transformation
+      double xTransformed = x;
+      if (paddingRatio > 0) {
+        xTransformed = (x - paddingRatio) / (1.0 - 2.0 * paddingRatio);
+      }
+
       if (confidence > showPointConfidence) {
-        final offset = Offset(x * size.width, y * size.height);
+        final offset = Offset(xTransformed * size.width, y * size.height);
 
         if (confidence > correctPointConfidence) {
           pointsGreen.add(offset);
@@ -142,10 +150,18 @@ class SkeletalOverlayPainter extends CustomPainter {
         x2 = 1.0 - x2;
       }
 
+      // Apply padding ratio transformation
+      double x1Transformed = x1;
+      double x2Transformed = x2;
+      if (paddingRatio > 0) {
+        x1Transformed = (x1 - paddingRatio) / (1.0 - 2.0 * paddingRatio);
+        x2Transformed = (x2 - paddingRatio) / (1.0 - 2.0 * paddingRatio);
+      }
+
       if (confidence1 > showPointConfidence &&
           confidence2 > showPointConfidence) {
-        final vertex1 = Offset(x1 * size.width, y1 * size.height);
-        final vertex2 = Offset(x2 * size.width, y2 * size.height);
+        final vertex1 = Offset(x1Transformed * size.width, y1 * size.height);
+        final vertex2 = Offset(x2Transformed * size.width, y2 * size.height);
 
         final paint =
             (confidence1 > correctPointConfidence &&
@@ -163,7 +179,8 @@ class SkeletalOverlayPainter extends CustomPainter {
     if (oldDelegate is SkeletalOverlayPainter) {
       return oldDelegate.inferenceList != inferenceList ||
           oldDelegate.showPointConfidence != showPointConfidence ||
-          oldDelegate.correctPointConfidence != correctPointConfidence;
+          oldDelegate.correctPointConfidence != correctPointConfidence ||
+          oldDelegate.paddingRatio != paddingRatio;
     }
     return true;
   }

@@ -35,6 +35,10 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   List<List<double>>? get keypoints => _keypoints;
 
+  double _paddingRatio = 0.0;
+
+  double get paddingRatio => _paddingRatio;
+
   CameraProvider() {
     WidgetsBinding.instance.addObserver(this);
   }
@@ -202,14 +206,26 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final MoveNetIsolateController movenetController =
           MoveNetIsolateController();
-      final List<List<double>>? result = await movenetController.runInference(
+      final List<dynamic>? result = await movenetController.runInference(
         cameraImage,
         _sensorOrientation,
       );
-      _keypoints = result;
+
+      // Check if we got valid results
+      if (result == null ||
+          result.isEmpty ||
+          result[0] == null ||
+          result[1] == null) {
+        debugPrint("🔴 No valid inference results");
+        return;
+      }
+
+      _keypoints = result[0] as List<List<double>>;
+      _paddingRatio = result[1] as double;
+
       notifyListeners();
       debugPrint(
-        "🟢 Inference completed (image: ${cameraImage.width}x${cameraImage.height}, orientation: $_sensorOrientation°)",
+        "🟢 Inference completed (image: ${cameraImage.width}x${cameraImage.height}, padding: $_paddingRatio)",
       );
     } catch (e) {
       debugPrint("🔴 Error in processFrame: $e");

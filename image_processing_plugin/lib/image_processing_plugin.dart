@@ -1,5 +1,5 @@
-
 import 'dart:typed_data';
+
 import 'image_processing_plugin_platform_interface.dart';
 
 class ImageProcessingPlugin {
@@ -7,7 +7,7 @@ class ImageProcessingPlugin {
     return ImageProcessingPluginPlatform.instance.getPlatformVersion();
   }
 
-  Future<Uint8List> processYUVPlanesWithStride(
+  Future<List<dynamic>> processYUVPlanesWithStride(
     List<Uint8List> planeBytes,
     List<int> bytesPerRow,
     List<int> bytesPerPixel,

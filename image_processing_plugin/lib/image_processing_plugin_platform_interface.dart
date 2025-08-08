@@ -28,7 +28,7 @@ abstract class ImageProcessingPluginPlatform extends PlatformInterface {
     throw UnimplementedError('getPlatformVersion() has not been implemented.');
   }
 
-  Future<Uint8List> processYUVPlanesWithStride(
+  Future<List<dynamic>> processYUVPlanesWithStride(
     List<Uint8List> planeBytes,
     List<int> bytesPerRow,
     List<int> bytesPerPixel,
