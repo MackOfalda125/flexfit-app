@@ -42,8 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<List<double>>? keypoints = context
         .watch<CameraProvider>()
         .keypoints;
-    final sensorOrientation = context.watch<CameraProvider>().sensorOrientation;
-    final paddingRatio = context.watch<CameraProvider>().paddingRatio;
 
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
@@ -65,8 +63,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     inferenceList: keypoints,
                     canvasWidth: previewWidth,
                     canvasHeight: previewHeight,
-                    sensorOrientation: sensorOrientation,
-                    paddingRatio: paddingRatio,
                   ),
                   child: const CameraWidget(),
                 ),

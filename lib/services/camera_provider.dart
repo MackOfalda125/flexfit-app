@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:app/services/movenet/movenet_isolate_controller.dart';
+import 'package:app/services/native_inference_channel.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,11 +23,11 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   int _frameCount = 0;
 
+  static const int _skipFrameN = 3;
+
   bool _isProcessing = false;
 
   int _sensorOrientation = 0;
-
-  int get sensorOrientation => _sensorOrientation;
 
   bool get isInitialized => _cameraController?.value.isInitialized ?? false;
 
@@ -35,9 +35,11 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   List<List<double>>? get keypoints => _keypoints;
 
-  double _paddingRatio = 0.0;
-
-  double get paddingRatio => _paddingRatio;
+  // Buffers
+  List<Uint8List>? _planeBytesBuffer;
+  List<int>? _bytesPerRowBuffer;
+  List<int>? _bytesPerPixelBuffer;
+  int _lastPlaneCount = 0;
 
   CameraProvider() {
     WidgetsBinding.instance.addObserver(this);
@@ -49,10 +51,6 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     _isInitializing = true;
 
     try {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-      ]);
-
       final cameras = await availableCameras();
       final frontCamera = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.front,
@@ -63,9 +61,9 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       _cameraController = CameraController(
         frontCamera,
-        ResolutionPreset.medium, // TODO: change to low, test
+        ResolutionPreset.medium,
         enableAudio: false,
-        fps: 30, // Adjust as needed
+        fps: 30,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
       await _cameraController!.initialize();
@@ -89,37 +87,34 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (!isInitialized || _isStreaming) return;
 
     try {
-      _cameraController!.startImageStream((CameraImage image) {
-        // Process every 3rd frame
-        _frameCount++;
-        if (_frameCount % 3 == 0 && _isStreaming) {
-          // Double-check processing flag to ensure only one frame at a time
-          if (_isProcessing) {
-            debugPrint("🟡 Skipping frame - already processing");
-            return;
-          }
-
-          _isProcessing = true;
-          _frameCount = 0;
-
-          // Use unawaited to avoid blocking the stream
-          unawaited(
-            processFrame(image)
-                .catchError((error) {
-                  debugPrint("🔴 Error processing frame: $error");
-                })
-                .whenComplete(() {
-                  if (_isStreaming) {
-                    _isProcessing = false;
-                  }
-                }),
-          );
-        }
-      });
-
       _isStreaming = true;
       _frameCount = 0;
       notifyListeners();
+
+      _cameraController!.startImageStream((CameraImage image) {
+        if (!_isStreaming) return;
+
+        _frameCount++;
+        if (_frameCount % _skipFrameN != 0) return;
+
+        if (_isProcessing) {
+          debugPrint("🟡 Skipping frame - already processing");
+          return;
+        }
+
+        _isProcessing = true;
+
+        // Use unawaited to avoid blocking the stream
+        unawaited(
+          processFrame(image)
+              .catchError((error) {
+                debugPrint("🔴 Error processing frame: $error");
+              })
+              .whenComplete(() {
+                _isProcessing = false;
+              }),
+        );
+      });
     } catch (e) {
       debugPrint("🔴 Error starting image stream: $e");
       _isStreaming = false;
@@ -139,11 +134,13 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       _isProcessing = false;
       _keypoints = null;
       _frameCount = 0;
+      _planeBytesBuffer = null;
+      _bytesPerRowBuffer = null;
+      _bytesPerPixelBuffer = null;
       notifyListeners();
     }
   }
 
-  // Pause or resume camera based on app lifecycle
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
@@ -164,8 +161,6 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (!_isActive) {
       return;
     }
-
-    debugPrint("*** Pausing camera.");
     _isActive = false;
 
     if (_isStreaming) stopFrameCapture();
@@ -178,54 +173,56 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _resumeCamera() async {
     if (_isActive || _isInitializing) {
-      debugPrint("*** Camera is already active or initializing.");
       return;
     }
-
-    debugPrint("*** Resuming camera.");
     await initCamera();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    stopFrameCapture();
+
     _cameraController?.dispose();
-
-    // Reset device orientation
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-
     super.dispose();
   }
 
   Future<void> processFrame(CameraImage cameraImage) async {
     try {
-      final MoveNetIsolateController movenetController =
-          MoveNetIsolateController();
-      final List<dynamic>? result = await movenetController.runInference(
-        cameraImage,
+      final planeCount = cameraImage.planes.length;
+
+      // Initialize or resize buffers if needed
+      if (_planeBytesBuffer == null || _lastPlaneCount != planeCount) {
+        _planeBytesBuffer = List<Uint8List>.filled(
+          planeCount,
+          Uint8List(0),
+          growable: false,
+        );
+        _bytesPerRowBuffer = List<int>.filled(planeCount, 0, growable: false);
+        _bytesPerPixelBuffer = List<int>.filled(planeCount, 0, growable: false);
+        _lastPlaneCount = planeCount;
+      }
+
+      for (int i = 0; i < planeCount; i++) {
+        final plane = cameraImage.planes[i];
+        _planeBytesBuffer![i] = plane.bytes;
+        _bytesPerRowBuffer![i] = plane.bytesPerRow;
+        _bytesPerPixelBuffer![i] = plane.bytesPerPixel ?? 1;
+      }
+
+      _keypoints = await NativeInferenceChannel.processFrame(
+        _planeBytesBuffer!,
+        _bytesPerRowBuffer!,
+        _bytesPerPixelBuffer!,
+        cameraImage.width,
+        cameraImage.height,
         _sensorOrientation,
       );
 
-      // Check if we got valid results
-      if (result == null ||
-          result.isEmpty ||
-          result[0] == null ||
-          result[1] == null) {
-        debugPrint("🔴 No valid inference results");
-        return;
-      }
-
-      _keypoints = result[0] as List<List<double>>;
-      _paddingRatio = result[1] as double;
-
       notifyListeners();
+
       debugPrint(
-        "🟢 Inference completed (image: ${cameraImage.width}x${cameraImage.height}, padding: $_paddingRatio)",
+        "🟢 Inference completed: ${cameraImage.width}x${cameraImage.height}",
       );
     } catch (e) {
       debugPrint("🔴 Error in processFrame: $e");
