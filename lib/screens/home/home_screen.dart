@@ -101,8 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_isExerciseLoading)
             Container(
               color: Color(0x4C1B1B1B),
-              child: const Center(
-                child: CircularProgressIndicator(color: AppColors.primaryText),
+              child: Center(
+                child: Image.asset(
+                  "assets/images/flexfit_loading.gif",
+                  width: 200,
+                  height: 200,
+                ),
               ),
             ),
         ],

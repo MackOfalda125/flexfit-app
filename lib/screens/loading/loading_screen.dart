@@ -4,7 +4,6 @@ import 'package:app/services/native_inference_channel.dart';
 import 'package:app/utils/permissions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -186,23 +185,14 @@ class _LoadingScreenState extends State<LoadingScreen> {
       backgroundColor: AppColors.primaryBackground,
       extendBodyBehindAppBar: true,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("LOGO", style: AppTextStyles.primaryText),
-            // Insert flexfit logo
-            SizedBox(height: 130),
-            RepaintBoundary(
-              key: const ValueKey('loading_boundary'),
-              // Insert gif loading animation
-              child: LoadingAnimationWidget.discreteCircle(
-                color: AppColors.secondaryButton,
-                size: 80,
-                secondRingColor: AppColors.secondaryButton,
-                thirdRingColor: AppColors.primaryBackground,
-              ),
-            ),
-          ],
+        child: RepaintBoundary(
+          key: const ValueKey('loading_boundary'),
+          // Insert gif loading animation
+          child: Image.asset(
+            "assets/images/flexfit_loading.gif",
+            width: 200,
+            height: 200,
+          ),
         ),
       ),
     );
