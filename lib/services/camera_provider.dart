@@ -8,23 +8,20 @@ import 'package:flutter/widgets.dart';
 
 class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   CameraController? _cameraController;
-
   CameraController? get controller => _cameraController;
 
   bool _isInitializing = false;
 
   bool _isStreaming = false;
-
   bool get isStreaming => _isStreaming;
 
   bool _isActive = true;
 
-  double aspectRatio = 1.5;
+  double _aspectRatio = 1.5;
+  double get aspectRatio => _aspectRatio;
 
   int _frameCount = 0;
-
   static const int _skipFrameN = 3;
-
   bool _isProcessing = false;
 
   int _sensorOrientation = 0;
@@ -32,8 +29,13 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool get isInitialized => _cameraController?.value.isInitialized ?? false;
 
   List<List<double>>? _keypoints;
-
   List<List<double>>? get keypoints => _keypoints;
+
+  double? _formScore;
+  double? get formScore => _formScore;
+
+  int? _instructionId;
+  int? get instructionId => _instructionId;
 
   // Buffers
   List<Uint8List>? _planeBytesBuffer;
@@ -53,7 +55,9 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final cameras = await availableCameras();
       final frontCamera = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.front,
+        (c) =>
+            c.lensDirection ==
+            CameraLensDirection.back, // Change camera orientation here
         orElse: () => cameras.first,
       );
 
@@ -61,7 +65,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       _cameraController = CameraController(
         frontCamera,
-        ResolutionPreset.medium,
+        ResolutionPreset.low,
         enableAudio: false,
         fps: 30,
         imageFormatGroup: ImageFormatGroup.yuv420,
@@ -72,7 +76,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
         DeviceOrientation.portraitUp,
       );
 
-      aspectRatio = _cameraController!.value.aspectRatio;
+      _aspectRatio = _cameraController!.value.aspectRatio;
 
       _isActive = true;
       notifyListeners();
@@ -138,6 +142,14 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       _bytesPerRowBuffer = null;
       _bytesPerPixelBuffer = null;
       notifyListeners();
+    }
+  }
+
+  void toggleTracking() {
+    if (_isStreaming) {
+      stopFrameCapture();
+    } else {
+      startFrameCapture();
     }
   }
 
@@ -210,7 +222,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
         _bytesPerPixelBuffer![i] = plane.bytesPerPixel ?? 1;
       }
 
-      _keypoints = await NativeInferenceChannel.processFrame(
+      final result = await NativeInferenceChannel.processFrame(
         _planeBytesBuffer!,
         _bytesPerRowBuffer!,
         _bytesPerPixelBuffer!,
@@ -218,12 +230,16 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
         cameraImage.height,
         _sensorOrientation,
       );
+      _keypoints = result[0] as List<List<double>>;
+      _formScore = result[1] as double;
+      _instructionId = result[2] as int;
 
       notifyListeners();
 
       debugPrint(
         "🟢 Inference completed: ${cameraImage.width}x${cameraImage.height}",
       );
+      debugPrint("_formScore: $_formScore, _instructionId: $_instructionId");
     } catch (e) {
       debugPrint("🔴 Error in processFrame: $e");
     }

@@ -21,6 +21,22 @@ class MethodChannelMovenetImageProcessor extends MovenetImageProcessorPlatform {
     
   }
 
+  // Exercise model lifecycle
+  @override
+  Future<bool> initExerciseModel(String exercise) async {
+    final args = <String, dynamic>{
+      'exercise': exercise,
+    };
+    final ok = await methodChannel.invokeMethod<bool>('initExerciseModel', args);
+    return ok ?? false;
+  }
+
+  @override
+  Future<bool> isExerciseInitialized() async {
+    final value = await methodChannel.invokeMethod<bool>('isExerciseInitialized');
+    return value ?? false;
+  }
+
   @override
   Future<void> closeModel() {
     return methodChannel.invokeMethod<void>('closeModel');
@@ -28,7 +44,7 @@ class MethodChannelMovenetImageProcessor extends MovenetImageProcessorPlatform {
 
   // Inference
   @override
-  Future<List<List<double>>> processFrame({
+  Future<List<dynamic>> processFrame({
     required List<Uint8List> planes,
     required List<int> bytesPerRow,
     required List<int> bytesPerPixel,
@@ -46,10 +62,7 @@ class MethodChannelMovenetImageProcessor extends MovenetImageProcessorPlatform {
     };
 
     final dynamic res = await methodChannel.invokeMethod('processFrame', args);
-    // Expecting List<List<double>>; perform a safe cast
-    final list = (res as List)
-        .map<List<double>>((e) => (e as List).map<double>((v) => (v as num).toDouble()).toList())
-        .toList();
-    return list;
+    // Return the list directly from Kotlin
+    return res as List;
   }
 }

@@ -7,15 +7,13 @@ class SkeletalOverlayPainter extends CustomPainter {
   final List<List<double>>? inferenceList;
   final double canvasWidth;
   final double canvasHeight;
-  final double showPointConfidence;
-  final double correctPointConfidence;
+
+  // TODO: Change point/edge confidence so that 1=red, 0=green
 
   SkeletalOverlayPainter({
     required this.inferenceList,
     required this.canvasWidth,
     required this.canvasHeight,
-    this.showPointConfidence = 0.2,
-    this.correctPointConfidence = 0.4,
   });
 
   // Paint configurations
@@ -91,14 +89,12 @@ class SkeletalOverlayPainter extends CustomPainter {
       final y = point[0];
       final confidence = point[2];
 
-      if (confidence > showPointConfidence) {
-        final offset = Offset(x * size.width, y * size.height);
+      final offset = Offset(x * size.width, y * size.height);
 
-        if (confidence > correctPointConfidence) {
-          pointsGreen.add(offset);
-        } else {
-          pointsRed.add(offset);
-        }
+      if (confidence < 0.5) {
+        pointsGreen.add(offset);
+      } else {
+        pointsRed.add(offset);
       }
     }
   }
@@ -128,28 +124,21 @@ class SkeletalOverlayPainter extends CustomPainter {
       final y2 = point2[0];
       final confidence2 = point2[2];
 
-      if (confidence1 > showPointConfidence &&
-          confidence2 > showPointConfidence) {
-        final vertex1 = Offset(x1 * size.width, y1 * size.height);
-        final vertex2 = Offset(x2 * size.width, y2 * size.height);
+      final vertex1 = Offset(x1 * size.width, y1 * size.height);
+      final vertex2 = Offset(x2 * size.width, y2 * size.height);
 
-        final paint =
-            (confidence1 > correctPointConfidence &&
-                confidence2 > correctPointConfidence)
-            ? edgeGreen
-            : edgeRed;
+      final paint = (confidence1 >= 0.5 && confidence2 >= 0.5)
+          ? edgeRed
+          : edgeGreen;
 
-        canvas.drawLine(vertex1, vertex2, paint);
-      }
+      canvas.drawLine(vertex1, vertex2, paint);
     }
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     if (oldDelegate is SkeletalOverlayPainter) {
-      return oldDelegate.inferenceList != inferenceList ||
-          oldDelegate.showPointConfidence != showPointConfidence ||
-          oldDelegate.correctPointConfidence != correctPointConfidence;
+      return oldDelegate.inferenceList != inferenceList;
     }
     return true;
   }

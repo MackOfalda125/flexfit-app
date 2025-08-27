@@ -26,12 +26,25 @@ abstract class MovenetImageProcessorPlatform extends PlatformInterface {
     throw UnimplementedError('isInitialized() has not been implemented.');
   }
 
+  // Exercise model lifecycle
+  Future<bool> initExerciseModel(String exercise) {
+    throw UnimplementedError('initExerciseModel() has not been implemented.');
+  }
+
+  Future<bool> isExerciseInitialized() {
+    throw UnimplementedError('isExerciseInitialized() has not been implemented.');
+  }
+
   Future<void> closeModel() {
     throw UnimplementedError('closeModel() has not been implemented.');
   }
 
   // Inference
-  Future<List<List<double>>> processFrame({
+  // Returns List<dynamic> where:
+  // [0] = List<List<double>> keypoints
+  // [1] = double formScore  
+  // [2] = int instructionId
+  Future<List<dynamic>> processFrame({
     required List<Uint8List> planes,
     required List<int> bytesPerRow,
     required List<int> bytesPerPixel,

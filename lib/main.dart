@@ -1,5 +1,5 @@
-import 'package:app/features/home/home_screen.dart';
-import 'package:app/features/loading/loading_screen.dart';
+import 'package:app/screens/home/home_screen.dart';
+import 'package:app/screens/loading/loading_screen.dart';
 import 'package:app/services/camera_provider.dart';
 import 'package:app/services/native_inference_channel.dart';
 import 'package:flutter/material.dart';

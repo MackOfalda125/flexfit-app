@@ -7,11 +7,11 @@ import org.tensorflow.lite.DataType
 object InferenceProcessor {
     // Constants
     private const val INPUT_SIZE = 110592 // 192*192*3 bytes for UINT8 input
-    private const val OUTPUT_SIZE = 204    // 17*3*4 bytes for FLOAT32 output (51 floats)
     private const val KEYPOINT_COUNT = 17
     private const val VALUES_PER_KEYPOINT = 3
     private const val TARGET_SIZE = 192
     private val ZERO_KEYPOINTS = Array(17) { FloatArray(3) { 0f } }
+    private const val EXERCISE_INPUT_SIZE = 51
 
     // Buffers
     private var yuvBuffer: ByteArray? = null
@@ -24,6 +24,11 @@ object InferenceProcessor {
                 })
             }
         }
+    
+    // Reusable buffers for keypoints
+    private val flatKeypointsBuffer = FloatArray(EXERCISE_INPUT_SIZE)
+    private val keypointsBuffer = Array(KEYPOINT_COUNT) { FloatArray(VALUES_PER_KEYPOINT) }
+
 
     fun processFrame(
         planeBytes: List<ByteArray>,
@@ -32,7 +37,7 @@ object InferenceProcessor {
         width: Int,
         height: Int,
         sensorOrientation: Int,
-    ): ArrayList<ArrayList<Double>> {
+    ): List<Any> {
         // Initialize buffers
         initFrameBuffers(width, height)
 
@@ -62,21 +67,48 @@ object InferenceProcessor {
         val (resizedRgb, paddingRatio) =
             resizeRgbBytesToSquare(rotatedRgbBytes, rotatedWidth, rotatedHeight, TARGET_SIZE)
 
-        // 5. Run inference on processed image
-        val keypoints = runInferenceOnResizedRgb(resizedRgb)
+        // 5. Run inference on processed image (result stored in flatKeypointsBuffer)
+        runInferenceOnResizedRgb(resizedRgb)
 
-        // 6. Flip keypoints horizontally in-place (front camera mirroring)
-        if (sensorOrientation == 270) {
-            flipKeypointsHorizontally(keypoints)
+        // 6. Convert flat keypoints to structured format for processing (in-place)
+        convertFlatToKeypoints(flatKeypointsBuffer, keypointsBuffer)
+
+        // 7. Remove horizontal padding to get correct positioning for exercise model (in-place)
+        removeHorizontalPadding(keypointsBuffer, paddingRatio)
+
+        // 8. Convert back to flat format for exercise model input (in-place)
+        convertKeypointsToFlat(keypointsBuffer, flatKeypointsBuffer)
+
+        // 9. Run exercise inference
+        val exerciseResult = runExerciseInference(flatKeypointsBuffer)
+        
+        // Extract all three values from exercise result, with fallbacks
+        val finalKeypoints = if (exerciseResult != null) {
+            convertFlatToKeypoints(exerciseResult.first, keypointsBuffer) // Convert flat jointMaskedKeypoints to structured format
+            keypointsBuffer
+        } else {
+            keypointsBuffer // fallback to processed keypoints
+        }
+        
+        val formScore = exerciseResult?.second ?: 0.0f // fallback to 0.0 if no result
+        val instructionId = exerciseResult?.third ?: 0 // fallback to 0 if no result
+        
+        // Debug logging
+        if (exerciseResult != null) {
+            println("DEBUG: Exercise inference successful - Form Score: $formScore, Instruction ID: $instructionId")
+        } else {
+            println("DEBUG: Exercise inference failed - using fallback values")
         }
 
-        // 7. Apply inverse padding
-        removeHorizontalPadding(keypoints, paddingRatio)
+        // 10. Flip keypoints horizontally in-place (front camera mirroring)
+        if (sensorOrientation == 270) {
+            flipKeypointsHorizontally(finalKeypoints)
+        }
 
-        // 8. Convert Array<FloatArray> to List<List<Double>> for Dart
-        floatArrayToListDouble(keypoints)
+        // 11. Convert Array<FloatArray> to List<List<Double>> for Dart
+        floatArrayToListDouble(finalKeypoints)
 
-        return keypointsListBuffer
+        return listOf(keypointsListBuffer, formScore, instructionId)
     }
 
     private fun initFrameBuffers(width: Int, height: Int) {
@@ -309,7 +341,7 @@ object InferenceProcessor {
         return resized
     }
 
-    private fun runInferenceOnResizedRgb(resizedRgb: ByteArray): Array<FloatArray> {
+    private fun runInferenceOnResizedRgb(resizedRgb: ByteArray): FloatArray {
         return ModelLoader.withInterpreterBuffers { interpreter, inBuf, outBuf ->
             try {
                 require(resizedRgb.size == INPUT_SIZE) {
@@ -327,29 +359,21 @@ object InferenceProcessor {
                 // Run inference
                 interpreter.run(inBuf, outBuf)
 
-                // Parse output
+                // Use reusable buffer for output
                 outBuf.rewind()
-                FloatArray(KEYPOINT_COUNT * VALUES_PER_KEYPOINT).let { outArray ->
-                    outBuf.asFloatBuffer().get(outArray)
-                    parseMovenetOutputFloat(outArray)
-                }
+                outBuf.asFloatBuffer().get(flatKeypointsBuffer)
+                flatKeypointsBuffer
             } catch (e: Exception) {
                 println("Inference failed: ${e.message}")
-                ZERO_KEYPOINTS
+                // Fill reusable buffer with zeros on error
+                java.util.Arrays.fill(flatKeypointsBuffer, 0f)
+                flatKeypointsBuffer
             }
-        } ?: ZERO_KEYPOINTS
-    }
-
-    // Returns Array<FloatArray> [17][3] (y, x, score).
-    private fun parseMovenetOutputFloat(flatOutput: FloatArray): Array<FloatArray> {
-        val result = Array(17) { FloatArray(3) }
-        var inputIdx = 0
-        for (i in 0..16) {
-            result[i][0] = flatOutput[inputIdx++] // y
-            result[i][1] = flatOutput[inputIdx++] // x
-            result[i][2] = flatOutput[inputIdx++] // confidence
+        } ?: run {
+            // Fill reusable buffer with zeros if ModelLoader fails
+            java.util.Arrays.fill(flatKeypointsBuffer, 0f)
+            flatKeypointsBuffer
         }
-        return result
     }
 
     private fun flipKeypointsHorizontally(keypoints: Array<FloatArray>) {
@@ -379,6 +403,93 @@ object InferenceProcessor {
             row[0] = kp[0].toDouble()
             row[1] = kp[1].toDouble()
             row[2] = kp[2].toDouble()
+        }
+    }
+
+    // Returns Array<FloatArray> [17][3] (y, x, score).
+    private fun parseModelOutputFloat(flatOutput: FloatArray): Array<FloatArray> {
+        val result = Array(17) { FloatArray(3) }
+        var inputIdx = 0
+        for (i in 0..16) {
+            result[i][0] = flatOutput[inputIdx++] // y
+            result[i][1] = flatOutput[inputIdx++] // x
+            result[i][2] = flatOutput[inputIdx++] // confidence
+        }
+        return result
+    }
+
+
+    // Convert flat keypoints to structured format (in-place)
+    private fun convertFlatToKeypoints(flatKeypoints: FloatArray, outKeypoints: Array<FloatArray>) {
+        var idx = 0
+        for (i in 0 until KEYPOINT_COUNT) {
+            outKeypoints[i][0] = flatKeypoints[idx++] // y
+            outKeypoints[i][1] = flatKeypoints[idx++] // x
+            outKeypoints[i][2] = flatKeypoints[idx++] // confidence
+        }
+    }
+
+    // Convert structured keypoints to flat format (in-place)
+    private fun convertKeypointsToFlat(keypoints: Array<FloatArray>, outFlatKeypoints: FloatArray) {
+        var idx = 0
+        for (i in 0 until KEYPOINT_COUNT) {
+            outFlatKeypoints[idx++] = keypoints[i][0] // y
+            outFlatKeypoints[idx++] = keypoints[i][1] // x
+            outFlatKeypoints[idx++] = keypoints[i][2] // confidence
+        }
+    }
+
+
+
+    fun runExerciseInference(
+        flatKeypoints: FloatArray
+    ): Triple<FloatArray, Float, Int>? {
+        return ExerciseInference.withExerciseInferenceBuffers { interpreter, inBuf, jointMaskBuf, formScoreBuf, instructionIdBuf ->
+            try {
+                // Validate input size (model expects exactly 51 float values)
+                require(flatKeypoints.size == EXERCISE_INPUT_SIZE) {
+                    "Invalid keypoints size. Expected $EXERCISE_INPUT_SIZE, got ${flatKeypoints.size}"
+                }
+
+                // Prepare input buffer - put the flat keypoints into the input buffer
+                inBuf.clear()
+                inBuf.asFloatBuffer().put(flatKeypoints)
+                inBuf.rewind()
+
+                // Clear output buffers
+                jointMaskBuf.clear()
+                formScoreBuf.clear()
+                instructionIdBuf.clear()
+
+                // Create output map using the buffers from ExerciseInference
+                val outputs = mapOf<Int, Any>(
+                    0 to jointMaskBuf,
+                    1 to formScoreBuf,
+                    2 to instructionIdBuf
+                )
+
+                // Run inference with multiple outputs
+                interpreter.runForMultipleInputsOutputs(arrayOf(inBuf), outputs)
+
+                // Parse outputs
+                jointMaskBuf.rewind()
+                formScoreBuf.rewind()
+                instructionIdBuf.rewind()
+
+                val formScore = formScoreBuf.asFloatBuffer().get()
+                val instructionId = instructionIdBuf.asIntBuffer().get()
+
+                // Read jointMaskedKeypoints from buffer (model output is [1, 17, 3] format)
+                // Return as flat FloatArray to be converted later in processFrame
+                val jointMaskedKeypointsFlat = FloatArray(KEYPOINT_COUNT * VALUES_PER_KEYPOINT)
+                jointMaskBuf.asFloatBuffer().get(jointMaskedKeypointsFlat)
+
+                Triple(jointMaskedKeypointsFlat, formScore, instructionId)
+
+            } catch (e: Exception) {
+                println("Exercise inference failed: ${e.message}")
+                null
+            }
         }
     }
 

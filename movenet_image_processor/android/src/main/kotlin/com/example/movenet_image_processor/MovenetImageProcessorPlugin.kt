@@ -47,11 +47,47 @@ class MovenetImageProcessorPlugin : FlutterPlugin, MethodCallHandler {
             // Returns whether the interpreter is initialized
             "isInitialized" -> result.success(ModelLoader.isInitialized)
 
+            // Initialize exercise model
+            "initExerciseModel" -> {
+                pluginScope.launch {
+                    try {
+                        val exercise: String? = call.argument("exercise")
+                        if (exercise == null) {
+                            withContext(Dispatchers.Main) {
+                                result.error("BAD_ARGS", "Missing exercise argument.", null)
+                            }
+                            return@launch
+                        }
+                        
+                        println("DEBUG: initExerciseModel called with exercise=$exercise")
+
+                        ExerciseInference.initExerciseModel(applicationContext, exercise)
+                        val ok = ExerciseInference.isInitialized
+
+                        println("DEBUG: initExerciseModel result for $exercise -> $ok")
+
+                        withContext(Dispatchers.Main) {
+                            result.success(ok)
+                        }
+                    } catch (e: Throwable) {
+                        println("DEBUG: initExerciseModel failed: ${e.message}")
+                        
+                        withContext(Dispatchers.Main) {
+                            result.error("EXERCISE_INIT_FAILED", e.message, null)
+                        }
+                    }
+                }
+            }
+
+            // Returns whether the exercise model is initialized
+            "isExerciseInitialized" -> result.success(ExerciseInference.isInitialized)
+
             // Close and release interpreter resources
             "closeModel" -> {
                 pluginScope.launch {
                     try {
                         ModelLoader.closeModel()
+                        ExerciseInference.closeExerciseModel()
                         withContext(Dispatchers.Main) {
                             result.success(null)
                         }
@@ -71,7 +107,18 @@ class MovenetImageProcessorPlugin : FlutterPlugin, MethodCallHandler {
                             withContext(Dispatchers.Main) {
                                 result.error(
                                     "NOT_INITIALIZED",
-                                    "Model has not been initialized.",
+                                    "MoveNet model has not been initialized.",
+                                    null
+                                )
+                            }
+                            return@launch
+                        }
+
+                        if (!ExerciseInference.isInitialized) {
+                            withContext(Dispatchers.Main) {
+                                result.error(
+                                    "EXERCISE_NOT_INITIALIZED",
+                                    "Exercise model has not been initialized.",
                                     null
                                 )
                             }
@@ -98,7 +145,7 @@ class MovenetImageProcessorPlugin : FlutterPlugin, MethodCallHandler {
                             return@launch
                         }
 
-                        val out: ArrayList<ArrayList<Double>> = InferenceProcessor.processFrame(
+                        val out: List<Any> = InferenceProcessor.processFrame(
                             planeBytes = planes,
                             bytesPerRow = bytesPerRow,
                             bytesPerPixel = bytesPerPixel,
@@ -127,8 +174,9 @@ class MovenetImageProcessorPlugin : FlutterPlugin, MethodCallHandler {
         pluginScope.cancel()
         try {
             ModelLoader.closeModel()
+            ExerciseInference.closeExerciseModel()
         } catch (e: Throwable) {
-            Log.e("MoveNetPlugin", "Error closing model on engine detach", e)
+            Log.e("MoveNetPlugin", "Error closing models on engine detach", e)
         }
     }
 }

@@ -20,10 +20,16 @@ void main() {
             return true;
           case 'isInitialized':
             return true;
+          case 'initExerciseModel':
+            return true;
+          case 'isExerciseInitialized':
+            return true;
           case 'closeModel':
             return null;
           case 'processFrame':
-            return List.generate(17, (_) => [0.0, 0.0, 0.0]);
+            // Return the new format: [keypoints, formScore, instructionId]
+            final keypoints = List.generate(17, (_) => [0.0, 0.0, 0.0]);
+            return [keypoints, 0.5, 1];
           default:
             return null;
         }
@@ -41,9 +47,14 @@ void main() {
     await platform.closeModel();
   });
 
+  test('exercise model lifecycle', () async {
+    expect(await platform.initExerciseModel("squats"), true);
+    expect(await platform.isExerciseInitialized(), true);
+  });
+
   test('processFrame', () async {
     final planes = <Uint8List>[Uint8List(10), Uint8List(5), Uint8List(5)];
-    final out = await platform.processFrame(
+    final result = await platform.processFrame(
       planes: planes,
       bytesPerRow: [10, 5, 5],
       bytesPerPixel: [1, 2, 2],
@@ -51,7 +62,17 @@ void main() {
       height: 2,
       sensorOrientation: 0,
     );
-    expect(out.length, 17);
-    expect(out[0].length, 3);
+    
+    // Test the new return format: [keypoints, formScore, instructionId]
+    expect(result.length, 3);
+    
+    final keypoints = result[0] as List<List<double>>;
+    final formScore = result[1] as double;
+    final instructionId = result[2] as int;
+    
+    expect(keypoints.length, 17);
+    expect(keypoints[0].length, 3);
+    expect(formScore, 0.5);
+    expect(instructionId, 1);
   });
 }
