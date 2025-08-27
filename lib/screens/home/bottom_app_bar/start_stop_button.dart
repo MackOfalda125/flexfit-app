@@ -1,20 +1,19 @@
 import 'package:app/core/constants.dart';
+import 'package:app/services/camera_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class StartStopButton extends StatelessWidget {
-  final VoidCallback onTap;
-  final bool isTracking;
-
-  const StartStopButton({
-    super.key,
-    required this.onTap,
-    required this.isTracking,
-  });
+  const StartStopButton({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final bool isTracking = context.select<CameraProvider, bool>(
+      (p) => p.isStreaming,
+    );
+
     return InkWell(
-      onTap: onTap,
+      onTap: () => context.read<CameraProvider>().toggleTracking(),
       child: Container(
         height: 38.40,
         width: 70,

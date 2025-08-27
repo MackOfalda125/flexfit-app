@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
+import 'package:app/services/camera_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class CustomSemicircle extends StatelessWidget {
-  final int score;
-
-  const CustomSemicircle({super.key, required this.score});
+  const CustomSemicircle({super.key});
 
   Color _getScoreColor(int score) {
     if (score == 0) {
       return AppColors.primaryShadow;
-    } else if (score >= 85) {
+    } else if (score >= 70) {
       return AppColors.goodForm;
-    } else if (score >= 60) {
+    } else if (score >= 50) {
       return AppColors.moderateForm;
     } else {
       return AppColors.poorForm;
@@ -20,7 +20,9 @@ class CustomSemicircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scoreColor = _getScoreColor(score);
+    final formScore = context.watch<CameraProvider>().formScore ?? 0;
+    final percentScore = (formScore * 100).round();
+    final scoreColor = _getScoreColor(percentScore);
 
     return Stack(
       alignment: Alignment.bottomCenter,
@@ -53,12 +55,18 @@ class CustomSemicircle extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Center(child: Text(score.toString(), style: AppTextStyles.percentageText)),
+              Center(
+                child: Text(
+                  percentScore.toString(),
+                  style: AppTextStyles.percentageText,
+                ),
+              ),
               const Positioned(
-                  right: 13,
-                  top: 20,
-                  bottom: 0,
-                  child: Text("%", style: AppTextStyles.percentageSymbol,))
+                right: 13,
+                top: 20,
+                bottom: 0,
+                child: Text("%", style: AppTextStyles.percentageSymbol),
+              ),
             ],
           ),
         ),

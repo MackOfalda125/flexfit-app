@@ -51,65 +51,34 @@ class _LoadingScreenState extends State<LoadingScreen> {
     }
 
     // Load MoveNet model
-    // New model loading (native inference channel)
     try {
       final success = await NativeInferenceChannel.initializeModel();
       if (!success) {
         throw Exception("Failed to initialize MoveNet model");
       }
-
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(currentContext, '/home');
     } catch (e) {
       debugPrint('Error initializing MoveNet model: $e');
       if (!mounted) return;
       showModelLoadingError(currentContext, e.toString());
+      return;
     }
 
-    // Old model loading (flutter asset)
-    // try {
-    //   final modelBytes = await rootBundle.load(
-    //     'assets/models/movenet_singlepose_lightning.tflite',
-    //   );
-    //   final modelBytesList = modelBytes.buffer.asUint8List();
-    //
-    //   await MoveNetIsolateController().initialize(modelBytesList);
-    //
-    //   // Navigate to home screen after initialization
-    //   if (!mounted) return;
-    //
-    //   Navigator.pushReplacementNamed(currentContext, '/home');
-    // } catch (e) {
-    //   debugPrint('Error initializing MoveNet model: $e');
-    // }
+    // Initialize exercise-specific model
+    try {
+      final exerciseInit = await NativeInferenceChannel.initExerciseModel(
+        'overhead presses',
+      );
+      if (!exerciseInit) {
+        throw Exception("Failed to initialize exercise model");
+      }
 
-    // TODO: Load  Exercise Models
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primaryText,
-      extendBodyBehindAppBar: true,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("LOGO", style: AppTextStyles.primaryText),
-            SizedBox(height: 130),
-            RepaintBoundary(
-              key: const ValueKey('loading_boundary'),
-              child: LoadingAnimationWidget.discreteCircle(
-                color: AppColors.secondaryButton,
-                size: 80,
-                secondRingColor: AppColors.secondaryButton,
-                thirdRingColor: AppColors.primaryBackground,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(currentContext, '/home');
+    } catch (e) {
+      debugPrint('Error initializing exercise model: $e');
+      if (!mounted) return;
+      showModelLoadingError(currentContext, e.toString());
+    }
   }
 
   static void showDeniedDialog(BuildContext context) {
@@ -180,7 +149,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
           style: AppTextStyles.buttonText.copyWith(fontSize: 20),
         ),
         content: Text(
-          "Failed to load MoveNet Model.",
+          "Failed to load Models.",
           style: AppTextStyles.buttonText,
         ),
         actions: [
@@ -207,6 +176,34 @@ class _LoadingScreenState extends State<LoadingScreen> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.primaryBackground,
+      extendBodyBehindAppBar: true,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("LOGO", style: AppTextStyles.primaryText),
+            // Insert flexfit logo
+            SizedBox(height: 130),
+            RepaintBoundary(
+              key: const ValueKey('loading_boundary'),
+              // Insert gif loading animation
+              child: LoadingAnimationWidget.discreteCircle(
+                color: AppColors.secondaryButton,
+                size: 80,
+                secondRingColor: AppColors.secondaryButton,
+                thirdRingColor: AppColors.primaryBackground,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

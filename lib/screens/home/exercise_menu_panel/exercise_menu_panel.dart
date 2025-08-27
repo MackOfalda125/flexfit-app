@@ -1,21 +1,18 @@
-import 'package:flutter/material.dart';
 import 'package:app/core/constants.dart';
-import 'package:app/features/home/exercise_button.dart';
+import 'package:app/screens/home/exercise_menu_panel/exercise_button.dart';
+import 'package:flutter/material.dart';
 
 class ExerciseMenuPanel extends StatelessWidget {
   final VoidCallback onBackPressed;
+  final Future<void> Function(String)? onExerciseSelected;
 
-  final List<String> exercises = [
-    "Overhead Presses",
-    "Pull-ups",
-    "Bench Presses",
-    "Bicep Curls",
-    "Squats",
-    "Lunges",
-    "Deadlifts",
-  ];
+  final List<String> exercises = ["Overhead Presses", "Bicep Curls", "Squats"];
 
-  ExerciseMenuPanel({super.key, required this.onBackPressed});
+  ExerciseMenuPanel({
+    super.key,
+    required this.onBackPressed,
+    this.onExerciseSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +33,10 @@ class ExerciseMenuPanel extends StatelessWidget {
                 .map(
                   (label) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: ExerciseButton(label: label),
+                    child: ExerciseButton(
+                      label: label,
+                      onTap: onExerciseSelected,
+                    ),
                   ),
                 )
                 .toList(),
