@@ -67,16 +67,16 @@ class InstructionPanel extends StatelessWidget {
           Text(
             exercise,
             style: AppTextStyles.percentageText.copyWith(
-              fontSize: 35,
+              fontSize: 30,
               fontWeight: FontWeight.bold,
             ),
           ),
           Row(
             children: [
-              Icon(Icons.camera_alt, size: 18, color: AppColors.primaryText),
+              Icon(Icons.camera_alt, size: 17, color: AppColors.primaryText),
               Text(
                 profileInstruction,
-                style: AppTextStyles.percentageText.copyWith(fontSize: 16),
+                style: AppTextStyles.percentageText.copyWith(fontSize: 15),
               ),
             ],
           ),

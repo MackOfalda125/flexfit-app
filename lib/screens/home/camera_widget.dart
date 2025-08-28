@@ -30,9 +30,13 @@ class CameraWidget extends StatelessWidget {
     final previewHeight = previewWidth * aspectRatio;
 
     if (!isInitialized || controller == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      ); // TODO: Change to flexfit loading gif
+      return Center(
+        child: Image.asset(
+          "assets/images/flexfit_loading.gif",
+          width: 200,
+          height: 200,
+        ),
+      );
     }
 
     return Container(

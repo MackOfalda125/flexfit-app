@@ -42,9 +42,9 @@ object ExerciseInference {
     ) {
         // Map exercise name to asset file name
         val assetName = when (exercise.lowercase()) {
-            "overhead presses" -> "overhead_pose_float16.tflite"
-            "bicep curls" -> "bicep_pose_float16.tflite"
-            "squats" -> "squat_pose_float16.tflite"
+            "overhead presses" -> "overhead_presses_float16.tflite"
+            "bicep curls" -> "bicep_curls_float16.tflite"
+            "squats" -> "squats_float16.tflite"
             else -> throw IllegalArgumentException("Unsupported exercise: $exercise")
         }
         

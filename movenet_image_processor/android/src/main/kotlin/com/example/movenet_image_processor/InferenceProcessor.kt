@@ -122,8 +122,6 @@ object InferenceProcessor {
         if (rgbBuffer == null || rgbBuffer!!.size != expectedRgbSize) {
             rgbBuffer = ByteArray(expectedRgbSize)
         }
-
-        println("DEBUG: Initialized Frame Buffers")
     }
 
     private fun extractYuvDataWithStride(

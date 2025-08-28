@@ -8,8 +8,6 @@ class SkeletalOverlayPainter extends CustomPainter {
   final double canvasWidth;
   final double canvasHeight;
 
-  // TODO: Change point/edge confidence so that 1=red, 0=green
-
   SkeletalOverlayPainter({
     required this.inferenceList,
     required this.canvasWidth,

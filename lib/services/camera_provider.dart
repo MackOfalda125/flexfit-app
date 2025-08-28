@@ -57,7 +57,7 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       final frontCamera = cameras.firstWhere(
         (c) =>
             c.lensDirection ==
-            CameraLensDirection.back, // Change camera orientation here
+            CameraLensDirection.front, // Change camera orientation here
         orElse: () => cameras.first,
       );
 
@@ -239,7 +239,6 @@ class CameraProvider extends ChangeNotifier with WidgetsBindingObserver {
       debugPrint(
         "🟢 Inference completed: ${cameraImage.width}x${cameraImage.height}",
       );
-      debugPrint("_formScore: $_formScore, _instructionId: $_instructionId");
     } catch (e) {
       debugPrint("🔴 Error in processFrame: $e");
     }
