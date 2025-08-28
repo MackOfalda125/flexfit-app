@@ -57,3 +57,5 @@ ios/
 macos/
 linux/
 windows/
+test/
+web/
